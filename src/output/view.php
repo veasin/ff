@@ -9,7 +9,7 @@ namespace nx\output;
 function view($response, $formats): void{
 	ob_start();
 	extract($response['body'] ?? []);
-	include $response['view'];
+	include $response['file'];
 	$response['body'] = ob_get_clean();
 	$formats['http']($response);
 }

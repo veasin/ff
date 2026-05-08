@@ -6,7 +6,7 @@ use function nx\test;
 $viewFile = __DIR__ . '/view_test.php';
 file_put_contents($viewFile, '<?php echo $name; ?>');
 
-$response = ['body' => ['name' => 'test'], 'code' => 200, 'headers' => [], 'view' => $viewFile];
+$response = ['body' => ['name' => 'test'], 'code' => 200, 'headers' => [], 'file' => $viewFile];
 $formats = ['http' => '\nx\output\http'];
 
 ob_start();

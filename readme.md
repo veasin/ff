@@ -185,7 +185,16 @@ output(['error' => 'not found'], 404);
 
 // 指定格式输出
 output($data, 'json');
-output(['view' => 'template.php'], 'view');
+
+// 输出视图
+output($viewData, 'view', 'template.php');
+output($viewData, 'view', ['file' => 'template.php']);
+
+// 文件输出（展示文件）
+output(null, 'file', '/path/to/file.pdf');
+
+// 文件下载
+output(true, 'file', '/path/to/file.pdf');
 
 // 带响应头
 output(['token' => $token], 200, ['Authorization' => 'Bearer xxx']);
