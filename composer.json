@@ -36,7 +36,7 @@
       "src/output/view.php",
       "src/output.php",
       "src/name.php",
-      "src/run.php",
+      "src/hump.php",
       "src/middleware.php",
       "src/route.php",
       "src/db.php",

@@ -2,7 +2,7 @@
 namespace nx;
 /**
  * 数据库操作函数
- * @param \nx\helpers\sql|string              $sql        SQL语句
+ * @param object|string                       $sql        SQL语句
  * @param array|string|int|callable|bool|null $params     参数数组 或 mode（当省略params时）
  * @param string|int|callable|bool|null       $mode       操作模式 或 configName（当params为数组时）
  * @param string|null                         $configName 配置名称
@@ -22,8 +22,7 @@ function db(object|string $sql, array|string|int|callable|bool|null $params = []
 					\PDO::ATTR_DEFAULT_FETCH_MODE => \PDO::FETCH_ASSOC,
 					\PDO::ATTR_STRINGIFY_FETCHES => false,
 					\PDO::ATTR_EMULATE_PREPARES => false,
-				]
-			);
+				]);
 		}catch(\PDOException $e){
 			return null;
 		}
