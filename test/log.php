@@ -11,7 +11,7 @@ class TestLogger{
 	}
 }
 $testLogger = new TestLogger();
-container('nx:log', $testLogger);
+container('#log', $testLogger);
 log('test message');
 test('默认level为info', $testLogger->logs[0]['level'] ?? '', 'info');
 $testLogger->logs = [];
@@ -53,7 +53,7 @@ $stringableLog = new class{
 		$this->message = $message instanceof \Stringable ? (string)$message : gettype($message);
 	}
 };
-container('nx:log', $stringableLog);
+container('#log', $stringableLog);
 log(new StringableClass());
 test('Stringable支持', $stringableLog->message, 'from Stringable');
 container(null);
@@ -63,7 +63,7 @@ $closureLogger = function(string $level, string|array|object $message, array $co
 	$closureCalled = true;
 	$closureLog = ['level' => $level, 'message' => $message, 'context' => $context];
 };
-container('nx:log.fn', $closureLogger);
+container('#log.fn', $closureLogger);
 log('closure test', ['id' => 456], 'warning');
 test('闭包logger调用', $closureCalled, true);
 test('闭包logger参数', $closureLog['level'] ?? '', 'warning');

@@ -5,9 +5,9 @@ namespace nx;
  * 日志函数，PSR-3 风格输出，内部通过容器注入 PSR Logger
  * ```
  * // 注入 PSR Logger
- * container('nx:log', $logger);
+ * container('#log', $logger);
  * // 注入闭包
- * container('nx:log', ['fn' => fn($level, $message, $context) => ...]);
+ * container('#log', ['fn' => fn($level, $message, $context) => ...]);
  * // 使用
  * log('用户 {user} 登录', ['user' => 'admin'], 'info');
  * log('错误: 连接失败', 'error');
@@ -34,8 +34,8 @@ function log(string|array|object $message, array|string|null $context = null, st
 	else $context ??= [];
 	$level = strtolower($level);
 	if(!isset($levels[$level])) $level = 'info';
-	if(container(null, 'nx:log')){
-		$logger = container('nx:log');
+	if(container('#log')){
+		$logger = container('#log');
 		$fn = null;
 		if(is_array($logger) && is_callable($logger['fn'] ?? null)) $fn = $logger['fn'];
 		if($logger && is_object($logger) && method_exists($logger, 'log')) $fn = $logger->log(...);

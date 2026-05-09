@@ -16,7 +16,7 @@ use function nx\{from, output, container};
  * - 启用一年缓存期
  *
  * 扩展 MIME 类型:
- * - container('nx:static:mimes', ['自定义扩展名' => 'application/xxx'])
+ * - container('#static:mimes', ['自定义扩展名' => 'application/xxx'])
  *
  * @param string $root 静态文件根目录
  * @param array  $map  扩展名到文件的映射
@@ -50,7 +50,7 @@ function serve(string $root, array $map = []): callable{
 			'ttf' => 'font/ttf',
 			'zip' => 'application/zip',
 			'xml' => 'application/xml',
-			...(container('nx:static:mimes') ?? []),
+			...(container('#static:mimes') ?? []),
 		];
 		$contentType = $types[$ext] ?? (mime_content_type($file) || 'application/octet-stream');
 		$content = file_get_contents($file);

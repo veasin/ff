@@ -20,5 +20,5 @@ test('json: JSON字符串转换为数组', function() {
 
 test('json: 设置Content-Type', function() {
     middleware(json(), fn() => ['test' => 123]);
-    return container('nx:output:response.headers.Content-Type');
+    return container('#out.response.headers.Content-Type');
 }, fn($v) => str_contains($v ?? '', 'application/json'));

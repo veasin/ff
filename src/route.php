@@ -56,6 +56,6 @@ function route(string|array $match, callable ...$fns): mixed{
 			$handlers = [...$handlers, ...is_array($fn) ? $fn : [$fn]];
 		}
 	}
-	container('nx:from:params', $params);
+	container('#in.params', $params);
 	return $handlers ? run(...$handlers) : null;
 }

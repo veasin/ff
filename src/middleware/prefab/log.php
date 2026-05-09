@@ -30,7 +30,7 @@ function log(string $level = 'info'): callable{
 		$result = $next();
 		$duration = round((microtime(true) - $start) * 1000, 2);
 		$memory = round((memory_get_usage() - $memStart) / 1024, 2);
-		$status = container('nx:output:response:code') ?? 200;
+		$status = container('#out.response:code') ?? 200;
 		nxlog([
 			'method' => $request['method'],
 			'uri' => $request['uri'],

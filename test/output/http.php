@@ -4,7 +4,7 @@ include __DIR__ . "/../../vendor/autoload.php";
 use function nx\{container, from, test};
 use function nx\output\http;
 
-container('nx:from:input', ['protocol' => 'HTTP/1.1']);
+container('#in.input', ['protocol' => 'HTTP/1.1']);
 
 $response = ['body' => 'hello', 'code' => 200, 'headers' => ['Content-Type' => 'text/plain']];
 ob_start();

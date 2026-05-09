@@ -45,7 +45,7 @@ function filter(mixed $var, string|array|callable ...$rules): mixed{
 			default => null
 		}, null],
 	];
-	$rulesConfig = [...$defaultRules, ...(container('nx:filter') ?? [])];
+	$rulesConfig = [...$defaultRules, ...(container('#filter') ?? [])];
 	$converter = null;
 	$validators = [];
 	foreach($rules as $dirty){
@@ -66,15 +66,12 @@ function filter(mixed $var, string|array|callable ...$rules): mixed{
 							if($vs) $validators[] = [$vs, $params];
 							break;
 						}
-					} else {
-						// 处理没有解析器的规则，如 'int', 'str'
-						if(isset($rulesConfig[$part])){
-							[, $convert, $vs] = $rulesConfig[$part];
-							if($convert) $converter = $convert;
-							if($vs) $validators[] = [$vs, null];
-							$parsed = true;
-							break;
-						}
+					} elseif(isset($rulesConfig[$part])){// 处理没有解析器的规则，如 'int', 'str'
+						[, $convert, $vs] = $rulesConfig[$part];
+						if($convert) $converter = $convert;
+						if($vs) $validators[] = [$vs, null];
+						$parsed = true;
+						break;
 					}
 				}
 				if(!$parsed) return null;

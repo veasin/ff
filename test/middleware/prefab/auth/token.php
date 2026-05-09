@@ -7,22 +7,22 @@ use function nx\middleware\prefab\token;
 
 test('token: 无 token 返回401',
 	function(){
-		container('nx:mw:auth:validators', [fn($token) => $token === 'valid-token' ? 'user1' : null]);
-		container('nx:mw:auth:user', null);
-		container('nx:output:response', null);
-		container('nx:from:headers', null);
+		container('#mw:auth:validators', [fn($token) => $token === 'valid-token' ? 'user1' : null]);
+		container('#mw:auth:user', null);
+		container('#out.response', null);
+		container('#in.headers', null);
 		$_SERVER['REQUEST_METHOD'] = 'GET';
 		middleware(token(), fn($next) => 'ok');
-		return container('nx:output:response.code');
+		return container('#out.response.code');
 	},
 	401);
 
 test('token: 认证成功返回结果',
 	function(){
-		container('nx:mw:auth:validators', [fn($token) => $token === 'valid-token' ? 'user1' : null]);
-		container('nx:mw:auth:user', null);
-		container('nx:output:response', null);
-		container('nx:from:headers', null);
+		container('#mw:auth:validators', [fn($token) => $token === 'valid-token' ? 'user1' : null]);
+		container('#mw:auth:user', null);
+		container('#out.response', null);
+		container('#in.headers', null);
 		$_SERVER['REQUEST_METHOD'] = 'GET';
 		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer valid-token';
 		return middleware(token(), fn($next) => 'ok');
@@ -31,13 +31,13 @@ test('token: 认证成功返回结果',
 
 test('token: 无效 token 返回403',
 	function(){
-		container('nx:mw:auth:validators', [fn($token) => $token === 'valid-token' ? 'user1' : null]);
-		container('nx:mw:auth:user', null);
-		container('nx:output:response', null);
-		container('nx:from:headers', null);
+		container('#mw:auth:validators', [fn($token) => $token === 'valid-token' ? 'user1' : null]);
+		container('#mw:auth:user', null);
+		container('#out.response', null);
+		container('#in.headers', null);
 		$_SERVER['REQUEST_METHOD'] = 'GET';
 		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer invalid-token';
 		middleware(token(), fn($next) => 'ok');
-		return container('nx:output:response.code');
+		return container('#out.response.code');
 	},
 	403);

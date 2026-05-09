@@ -38,8 +38,8 @@ function from(string|null|array $name, string|array $source = 'body'): mixed{
 				'uri' => $_SERVER['REQUEST_URI'] ?? '/',
 				'params' => null,
 			];
-		container("nx:from:params", $result['params']);
-		container("nx:from:input", $result);
+		container("#in.params", $result['params']);
+		container("#in.input", $result);
 		return $result;
 	};
 	static $getHeaders = function(){
@@ -52,32 +52,32 @@ function from(string|null|array $name, string|array $source = 'body'): mixed{
 				if(str_starts_with($n, 'HTTP_')) $headers[str_replace(' ', '-', strtolower(str_replace('_', ' ', substr($n, 5))))] = $v;
 			}
 		}
-		container("nx:from:headers", $headers);
+		container("#in.headers", $headers);
 		return $headers;
 	};
 	static $getBody = function(){
 		$content_type = from('content-type', 'header');
 		$content_type = $content_type ? strtolower(trim(explode(';', $content_type)[0])) : null;
-		$raw = container("nx:from:raw") ?? file_get_contents('php://input');
+		$raw = container("#in.raw") ?? file_get_contents('php://input');
 		$parsers = [
 			'multipart/form-data' => fn($raw) => $_POST,
 			'application/x-www-form-urlencoded' => fn($raw) => (parse_str($raw, $p) ?: $p),
 			'application/json' => fn($raw) => json_decode($raw, true),
-			...(container('nx:from:content') ?? []),
+			...(container('#in.content') ?? []),
 		];
 		$body = ($parsers[$content_type] ?? $parsers['default'] ?? fn() => [])($raw) ?? [];
 		$body['RAW'] = $raw;
-		container("nx:from:body", $body);
+		container("#in.body", $body);
 		return $body;
 	};
 	$from = match ($source) {
 		'query' => $_GET,
 		'cookie' => $_COOKIE,
 		'file' => $_FILES,
-		'params' => container("nx:from:params") ?? from('params', 'input') ?? [],
-		'header' => container("nx:from:headers") ?? $getHeaders(),
-		'input' => container("nx:from:input") ?? $getInput(),
-		'body' => container("nx:from:body") ?? $getBody(),
+		'params' => container("#in.params") ?? from('params', 'input') ?? [],
+		'header' => container("#in.headers") ?? $getHeaders(),
+		'input' => container("#in.input") ?? $getInput(),
+		'body' => container("#in.body") ?? $getBody(),
 		default => [],
 	};
 	return $name !== null ? ($from[$name] ?? null) : $from;

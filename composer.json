@@ -24,6 +24,7 @@
     },
     "files":[
       "src/test.php",
+      "src/env.php",
       "src/container.php",
       "src/filter.php",
       "src/args.php",

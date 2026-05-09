@@ -11,17 +11,17 @@ use function nx\{container, from, output};
  * 行为:
  * - 不验证时: 自动生成 token 并注入响应
  * - 验证时: 检查请求中的 _token 或 X-CSRF-Token header
- * - token 存储在 container('nx:csrf:token')
+ * - token 存储在 container('#csrf:token')
  * @param bool $verify 是否验证 token，默认 false
  * @return callable 中间件函数
  */
 function csrf(bool $verify = false): callable{
 	return function($next) use ($verify){
 		$token = from('_token', 'body') ?? from('X-CSRF-Token', 'header');
-		$sessionToken = container('nx:mw:csrf:token');
+		$sessionToken = container('#mw:csrf:token');
 		if($verify && ($token !== $sessionToken)) return output(null, 419, ['message' => 'CSRF token mismatch']);
 		$newToken = $sessionToken ?? bin2hex(random_bytes(32));
-		container('nx:mw:csrf:token', $newToken);
+		container('#mw:csrf:token', $newToken);
 		$result = $next();
 		if(is_array($result)) $result['_token'] = $newToken;
 		elseif(is_object($result)) $result->token = $newToken;

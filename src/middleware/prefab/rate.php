@@ -12,8 +12,8 @@ use function nx\{from, output, container};
  * 
  * 存储方式:
  * - 默认使用 APCu: 需要 APCu 扩展
- * - 自定义存储: container('nx:rate:storage', fn($key, $window) => [$timestamp, ...])
- * - 或 container('nx:rate:storage', fn($key, $value, $ttl) => ...)
+ * - 自定义存储: container('#rate:storage', fn($key, $window) => [$timestamp, ...])
+ * - 或 container('#rate:storage', fn($key, $value, $ttl) => ...)
  *
  * @param int    $maxRequests  最大请求次数，默认 60
  * @param int    $windowSeconds 时间窗口（秒），默认 60
@@ -25,7 +25,7 @@ function rate(int $maxRequests = 60, int $windowSeconds = 60, string $key = 'rat
 		$ip = $_SERVER['REMOTE_ADDR'] ?? from('remote_addr', 'input') ?? 'unknown';
 		$route = from('uri', 'input') ?? '';
 		$cacheKey = "$key:$ip:$route";
-		$storage = container('nx:rate:storage');
+		$storage = container('#rate:storage');
 		$timestamps = $storage ? $storage($cacheKey) : null;
 		if($timestamps === null){
 			$timestamps = [];

@@ -31,7 +31,7 @@ function http($response): void{
 			else header($header . ': ' . $value);
 		}
 	}
-	$callback = container('nx:output:callback') ?? null;
+	$callback = container('#out.callback') ?? null;
 	if(null !== $callback) $callback($response);
 	else echo $response['body'] ?? '';
 }

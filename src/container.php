@@ -2,78 +2,75 @@
 declare(strict_types=1);
 namespace nx;
 /**
- * 容器方法，支持配置读取、设置与延迟构建
- * 基本操作示例：
+ * 容器方法，支持双生命周期（持久/请求级）与延迟构建
+ * 基本操作：
  * ```
- * // 获取所有配置
- * $all = container();
- * // 清空配置
- * container(null);
- * // 检查键是否存在（支持 . 分隔）
- * $exists = container(null, 'database.host');  // 返回 bool
- * // 读取值（支持 . 分隔）
- * $host = container('database.host');  // 不存在返回 null
- * // 设置值（支持 . 分隔）
- * container('database.host', 'localhost');
- * container('app.debug', true);
- * // 删除键（设置 null）
- * container('database.host', null);
- * // 批量读取（list 数组）
- * $values = container(['database.host', 'app.debug']);  // 返回对应的值数组
- * // 批量设置（map 数组）
- * container([
- *     'database.host' => '127.0.0.1',
- *     'database.port' => 3306,
- *     'app.debug' => false,
- *     'app.cache' => null  // 删除键
- * ]);
- * // 延迟构建（存储可调用对象，访问时自动执行）
- * container('version', fn() => file_get_contents('version.txt'));
- * $version = container('version');  // 自动执行并返回结果
+ * $all = container();                          // 获取所有配置
+ * container(null);                             // 清空请求级
+ * container(null, '^');                        // 清空持久级
+ * $host = container('database.host');          // 读取值（支持 . 分隔，先查请求级再查持久级）
+ * $host = container('^database.host');         // 仅读取持久级
+ * container('database.host', 'localhost');     // 设置值（写入请求级）
+ * container('^database.host', 'localhost');    // 设置值（写入持久级）
+ * container('database.host', null);            // 删除键（设置 null）
+ * $values = container(['database.host', 'app.debug']);// 批量读取
+ * container(['k' => 'v']);                     // 批量设置（写入请求级）
+ * container(['k' => 'v'], '^');                // 批量持久设置
+ * container(['^persist.k' => 'v', 'request.k' => 'v']);// 数组 key 可单独加 ^ 修饰符覆盖
+ * container('db', fn() => new PDO(...));       // 闭包工厂：存入闭包，用 * 后缀执行
+ * $closure = container('db');                  // 返回闭包本身
+ * $pdo     = container('db*');                 // 执行闭包返回结果
+ * container('plain', 'str');                   // 非闭包值忽略 *
+ * container('plain*');                         // 返回 'str'
  * ```
- * 返回值说明：
- * - container()                           : array  全部配置
- * - container(null)                       : array  空数组
- * - container(null, string)                : bool   键是否存在
- * - container(string)                      : mixed  键对应的值（不存在返回 null）
- * - container(string, mixed)               : void   设置值（null 表示删除）
- * - container(array)                       : array|void list数组返回批量读取结果，map数组进行批量设置
- * @param array|string|null $key   键名，支持 . 分隔访问嵌套数组，或数组形式批量操作
- * @param mixed|null        $value 值，若为 null 则删除键
+ * @param array|string|null $key   键名，支持 . 分隔访问嵌套数组，^ 前缀持久，* 后缀执行闭包
+ * @param mixed|null        $value 值，null 删除键，true/'^' 表示持久操作
  * @return mixed 读取时返回值，设置时返回 void
  */
 function container(array|string|null $key = null, mixed $value = null): mixed{
-	static $container = [];
-	static $get = function(string $key, $check = null) use (&$container): mixed{
-		$current = &$container;
-		foreach(explode('.', $key) as $k){
-			if(!is_array($current) || !array_key_exists($k, $current)) return $check;
-			$current = &$current[$k];
+	static $persist = [], $request = [];
+	static $get = fn(array $arr, string $k) => array_reduce(explode('.', $k), fn($c, $p) => is_array($c) ? ($c[$p] ?? null) : null, $arr);
+	static $set = function(array &$arr, string $k, mixed $v): void{
+		$parts = explode('.', $k);
+		$last = array_pop($parts);
+		$cur = &$arr;
+		foreach($parts as $p){
+			if(!isset($cur[$p]) || !is_array($cur[$p])) $cur[$p] = [];
+			$cur = &$cur[$p];
 		}
-		return false === $check ? true : (is_callable($current) ? $current() : $current);
+		if($v === null) unset($cur[$last]);
+		else $cur[$last] = $v;
 	};
-	static $set = function(string $key, mixed $value) use (&$container): void{
-		$keys = explode('.', $key);
-		$current = &$container;
-		$lastKey = array_pop($keys);
-		foreach($keys as $k){
-			if(!isset($current[$k]) || !is_array($current[$k])) $current[$k] = [];
-			$current = &$current[$k];
-		}
-		if($value === null) unset($current[$lastKey]);
-		else$current[$lastKey] = $value;
+	static $parseKey =function($key){
+		if ($key === '') throw new \InvalidArgumentException('Key cannot be empty');
+		$persist =$key[0] ==='^';
+		$execute =$key[-1]==='*';
+		return [substr($key, $persist ? 1 : 0,  $execute?-1:null), $persist, $execute];
 	};
 	return match (func_num_args()) {
-		0 => $container,
+		0 => array_merge($persist, $request),
 		1 => match (true) {
-			$key === null => $container = [],
-			is_array($key) => array_is_list($key) ? array_map($get, $key) : (fn() => array_walk($key, fn($v, $k) => $set($k, $v)))(),
-			default => $get($key)
+			$key === null => ($request = []) ?: [],
+			is_array($key) && array_is_list($key) => array_map(fn($k) => container($k), $key),
+			is_array($key) => array_walk($key, fn($v, $k) => container($k, $v)) && null,
+			is_string($key) => (function() use ($key, $get, $parseKey, &$persist, &$request){
+				[$k, $fromPersist, $execute] = $parseKey($key);
+				$val = $fromPersist ? $get($persist, $k) : ($get($request, $k) ?? $get($persist, $k));
+				return ($execute && $val instanceof \Closure) ? $val() : $val;
+			})(),
+			default => null,
 		},
 		2 => match (true) {
-			$key === null && is_string($value) => $get($value, false),
-			is_string($key) => $set($key, $value),
-			default => null
+			$key === null && ($value === true || $value === '^') => ($persist = []) ?: [],
+			is_string($key) => (function() use ($key, $value, $parseKey, $set, &$persist, &$request){
+				[$k, $toPersist, $execute] = $parseKey($key);
+				if($execute) trigger_error("container write with * suffix has no effect: {$key}", E_USER_WARNING);
+				$toPersist ? $set($persist, $k, $value) : $set($request, $k, $value);
+				return null;
+			})(),
+			is_array($key) => array_walk($key, fn($v, $k) => container((($value === true || $value === '^') && !str_starts_with($k, '^')) ? '^' . $k : $k, $v)) && null,
+			default => null,
 		},
+		default => null,
 	};
 }

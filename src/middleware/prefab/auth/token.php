@@ -9,11 +9,11 @@ use function nx\{container, from, output};
  * - 设置验证器: container("$prefix:validators", [fn($token) => $user])
  * - 使用中间件: middleware(token(), $handler)
  * - 获取用户: container("$prefix:user")
- * @param string $prefix 前缀，默认 'nx:mw:auth'
+ * @param string $prefix 前缀，默认 '#mw:auth'
  * @param string $headerName header 名称，默认 'Authorization'
  * @return callable 中间件函数
  */
-function token(string $prefix = 'nx:mw:auth', string $headerName = 'Authorization'): callable{
+function token(string $prefix = '#mw:auth', string $headerName = 'Authorization'): callable{
 	$headerName = strtolower(str_replace('-', '_', $headerName));
 	return function($next) use ($prefix, $headerName){
 		if(container("$prefix:user")) return $next();
