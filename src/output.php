@@ -15,7 +15,25 @@ use function nx\output\{file, http, view, json};
  * @return null
  */
 function output(mixed $data = null, int|string|null $mode = 200, array|string|null $responseSet = []): null{
-	if(func_num_args() === 0) return container('#out.render*');
+	if(0 === func_num_args()){
+		$response = container('#out.response');
+		if(!$response) container('#out.response', [...$responseSet, 'code' => 404, 'format' => 'http']);
+		if(!container('#out.render')){
+			container('#out.render',
+				function(){
+					$response = container('#out.response');
+					$formats = [
+						'json' => json(...),
+						'view' => view(...),
+						'file' => file(...),
+						'http' => http(...),
+						...(container('#out.formats') ?? []),
+					];
+					return $formats[$response['format'] ?? 'json']($response, $formats);
+				});
+		}
+		return container('#out.render*');
+	}
 	$statusCode = is_numeric($mode) ? $mode : 200;
 	$format = is_string($mode) ? $mode : null;
 	if('view' === $format || 'file' === $format){
@@ -23,19 +41,5 @@ function output(mixed $data = null, int|string|null $mode = 200, array|string|nu
 		else $file = $responseSet['file'] ?? null;
 	}
 	container('#out.response', [...$responseSet, 'body' => $data, 'code' => $statusCode, 'format' => $format, 'file' => $file ?? null]);
-	if(!container('#out.render')){
-		container('#out.render',
-			function(){
-				$response = container('#out.response');
-				$formats = [
-					'json' => json(...),
-					'view' => view(...),
-					'file' => file(...),
-					'http' => http(...),
-					...(container('#out.formats') ?? []),
-				];
-				return $formats[$response['format'] ?? 'json']($response, $formats);
-			});
-	}
 	return null;
 }

@@ -4,7 +4,7 @@ include __DIR__ . "/../vendor/autoload.php";
 use function nx\{container, name, test};
 
 // 设置配置
-container('name', [
+container('#name', [
 	'redis' => [
 		'uid' => 'user:{id}',
 		'session' => 'sess:{token}',

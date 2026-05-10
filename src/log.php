@@ -37,7 +37,7 @@ function log(string|array|object $message, array|string|null $context = null, st
 	if(container('#log')){
 		$logger = container('#log');
 		$fn = null;
-		if(is_array($logger) && is_callable($logger['fn'] ?? null)) $fn = $logger['fn'];
+		if(is_callable($logger)) $fn = $logger;
 		if($logger && is_object($logger) && method_exists($logger, 'log')) $fn = $logger->log(...);
 		if($fn){
 			$fn($level, $message, $context);

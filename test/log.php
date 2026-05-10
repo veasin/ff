@@ -63,7 +63,7 @@ $closureLogger = function(string $level, string|array|object $message, array $co
 	$closureCalled = true;
 	$closureLog = ['level' => $level, 'message' => $message, 'context' => $context];
 };
-container('#log.fn', $closureLogger);
+container('#log', $closureLogger);
 log('closure test', ['id' => 456], 'warning');
 test('闭包logger调用', $closureCalled, true);
 test('闭包logger参数', $closureLog['level'] ?? '', 'warning');

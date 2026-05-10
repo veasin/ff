@@ -8,7 +8,7 @@ namespace nx;
  * @return string 处理后的key
  */
 function name(string $keyConfigNameOrKeyTemplate, ?array $context = null, ?string $namespace = null): string{
-	$config = container('name') ?? [];
+	$config = container('#name') ?? [];
 	$key = $namespace
 		? ($config[$namespace][$keyConfigNameOrKeyTemplate] ?? $keyConfigNameOrKeyTemplate)
 		: $keyConfigNameOrKeyTemplate;
