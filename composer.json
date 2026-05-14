@@ -23,6 +23,7 @@
       "nx\\":"src/"
     },
     "files":[
+      "src/hook.php",
       "src/test.php",
       "src/env.php",
       "src/container.php",

@@ -213,6 +213,45 @@ $age = input('age', 'body,int,>=18,<=100');
 $data = input(['id' => 'int,>0', 'name' => 'str']);
 ```
 
+#### hook - 钩子系统
+
+注册/触发分离的钩子系统，与容器集成。用于管理函数执行时机，生命周期模式下 `output()` 等函数自动挂载。
+
+```php
+// 开启钩子模式（持久级，Worker 启动时调用一次）
+hook(true);                                  // 默认序列 ['after', 'end']
+hook(true, ['after', 'end']);                // 自定义默认序列
+
+// 注册回调到钩子（请求级）
+hook('after', function() {
+    output(['status' => 'ok']);
+});
+hook('end', function() {
+    test('结果验证', $result, $expected);
+});
+
+// 触发钩子
+hook();                     // 触发默认序列（after → end）
+hook('after');              // 触发单个钩子
+hook(['after', 'end']);     // 自定义触发顺序
+
+// 不开启钩子模式也能独立注册和触发
+hook('custom', fn() => echo 'hello');
+hook('custom');
+```
+
+| 调用 | 说明 |
+|---|---|
+| `hook(true)` | 开启钩子模式，持久级存储默认序列 `['after', 'end']` |
+| `hook(true, ['a', 'b'])` | 覆盖默认序列 |
+| `hook('name', callable)` | 注册回调到指定钩子名（请求级） |
+| `hook('name')` | 触发指定钩子下的所有回调 |
+| `hook(['a', 'b'])` | 按数组顺序依次触发各钩子 |
+| `hook()` | 读取持久级默认序列并依次触发 |
+
+> 钩子回调存储在请求级容器 `#hook.{name}`，请求结束时 `container(null)` 自动清空。
+> 默认序列存储在持久级容器 `^#hook`，跨请求保持。
+
 #### output - 输出数据
 
 ```php
