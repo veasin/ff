@@ -89,6 +89,7 @@ container('write_star*', 'val');
 restore_error_handler();
 test('*写操作触发warning', $warned, true);
 test('*写操作仍正常存储', container('write_star'), 'val');
+test();
 // 最终清理
 container(null);
 container(null, true);

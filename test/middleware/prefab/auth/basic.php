@@ -54,3 +54,4 @@ test('auth_basic: 密码含冒号正确解析',
 		return middleware(basic(), fn($next) => 'ok');
 	},
 	'ok');
+test();

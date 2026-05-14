@@ -23,4 +23,5 @@ ob_start();
 http($response);
 $result = ob_get_clean();
 test('output_http 自定义消息', $result, 'error');
+test();
 

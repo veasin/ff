@@ -14,5 +14,6 @@ ob_start();
 $result = ob_get_clean();
 test('output_view 模板渲染', $result, 'test');
 
+test();
 unlink($viewFile);
 

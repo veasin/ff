@@ -53,3 +53,4 @@ test('apikey: 无效 apiKey 返回403',
 		return container('#out.response.code');
 	},
 	403);
+test();

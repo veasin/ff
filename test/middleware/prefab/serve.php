@@ -36,9 +36,9 @@ test('serve: 设置正确的Content-Type', function() use ($testDir) {
     return container('#out.response.headers.Content-Type');
 }, fn($v) => str_starts_with($v, 'text/plain'));
 
+test();
+
 // 清理测试文件（在 shutdown 后执行）
-register_shutdown_function(function() use ($testDir) {
-    @unlink($testDir . '/test.txt');
-    @unlink($testDir . '/index.html');
-    @rmdir($testDir);
-});
+@unlink($testDir . '/test.txt');
+@unlink($testDir . '/index.html');
+@rmdir($testDir);

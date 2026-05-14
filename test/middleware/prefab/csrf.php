@@ -28,3 +28,4 @@ test('csrf: 验证失败返回419',
 		return container('#out.response.code');
 	},
 	419);
+test();

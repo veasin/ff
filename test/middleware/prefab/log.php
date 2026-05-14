@@ -53,3 +53,4 @@ test('log: 使用指定级别',
 		return $logged[0]['level'] ?? null;
 	},
 	'warning');
+test();

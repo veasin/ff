@@ -47,3 +47,4 @@ test('rate: 不同IP独立计数',
 		return middleware(rate(1, 60, 'ip'), fn($next) => 'ok');
 	},
 	'ok');
+test();

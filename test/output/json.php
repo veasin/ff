@@ -23,4 +23,5 @@ ob_start();
 \nx\output\json($response, $formats);
 $result = ob_get_clean();
 test('output_json null body', $result, '');
+test();
 

@@ -55,3 +55,4 @@ test('jwt: 签名错误返回403',
 		return container('#out.response.code');
 	},
 	403);
+test();

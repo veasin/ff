@@ -151,3 +151,4 @@ test('事务-小写sql支持', function(){
 	$result = db('commit', [], null, $configName);
 	return $result === true;
 }, true);
+test();

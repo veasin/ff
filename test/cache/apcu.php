@@ -19,4 +19,4 @@ test('cache_apcu 命中缓存', $result2, 'cached_value');
 
 apcu_delete('test_key');
 
-echo "cache/apcu.php 测试完成\n";
+test();

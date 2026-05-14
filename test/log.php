@@ -69,3 +69,4 @@ test('闭包logger调用', $closureCalled, true);
 test('闭包logger参数', $closureLog['level'] ?? '', 'warning');
 test('闭包logger消息', $closureLog['message'] ?? '', 'closure test');
 test('闭包logger上下文', $closureLog['context'] ?? [], ['id' => 456]);
+test();

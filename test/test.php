@@ -25,4 +25,4 @@ test('字符串包含', 'hello world', function($value){
 test('失败示例', 100, 200);
 // 另一个失败示例 - 显示红色
 test('类型比较', '123', 123);
-echo "\n测试执行中...\n";
+test();

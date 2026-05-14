@@ -60,3 +60,4 @@ test('sql对象-select指定字段', function(){
 	);
 	return array_keys($user) === ['id', 'name'];
 }, true);
+test();

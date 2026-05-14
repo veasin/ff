@@ -44,4 +44,5 @@ ob_start();
 output();
 $result = ob_get_clean();
 test('output() 无参发送', $result, json_encode(['name' => 'test']));
+test();
 

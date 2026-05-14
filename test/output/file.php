@@ -39,4 +39,5 @@ output();
 $result2 = ob_get_clean();
 test('file 数组传参', $result2, 'array param');
 
+test();
 unlink($testFile2);

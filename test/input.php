@@ -38,3 +38,4 @@ test('input + filter - email验证', input('email', 'body', 'email'), 'test@exam
 $_POST = ['email' => 'invalid-email'];
 container("#in.body", $_POST);
 test('input + filter - email验证失败', input('email', 'body', 'email'), null);
+test();

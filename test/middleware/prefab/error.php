@@ -25,3 +25,4 @@ test('error: debug模式显示详细错误', function() {
     });
     return container('#out.response.body.error');
 }, 'Detailed error');
+test();

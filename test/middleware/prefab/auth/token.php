@@ -41,3 +41,4 @@ test('token: 无效 token 返回403',
 		return container('#out.response.code');
 	},
 	403);
+test();

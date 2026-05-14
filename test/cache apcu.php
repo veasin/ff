@@ -55,3 +55,4 @@ test('APCu - 验证带前缀的key',
 );
 test('APCu - 缓存未命中时调用下一个', cache(['fn' => 'APCu', 'key' => 'not_exists_key'], fn($next) => '新数据'), '新数据');
 test('APCu - TTL配置生效', cache('网站配置', ['fn' => 'APCu', 'key' => 'site_config'], fn($next) => '网站配置数据'), '网站配置数据');
+test();

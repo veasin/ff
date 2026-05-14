@@ -22,3 +22,4 @@ test('json: 设置Content-Type', function() {
     middleware(json(), fn() => ['test' => 123]);
     return container('#out.response.headers.Content-Type');
 }, fn($v) => str_contains($v ?? '', 'application/json'));
+test();

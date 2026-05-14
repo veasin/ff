@@ -49,6 +49,7 @@ test('多参数传递',
 test('文件中间件嵌套', hump($file1, $wrapper, $fn3), 'f1((3))f1');
 test('文件中间件链式', hump($file2, $fn1, $fn2), '2');  // file2 返回 'f2' 但被忽略，最终 fn2 返回 '2'
 test('文件中间件无返回', hump($file2, $noReturn), null);
+test();
 // 清理临时文件
 unlink($file1);
 unlink($file2);

@@ -32,6 +32,7 @@ test('初始值传递（非函数参数）', middleware(10, $double, $identity),
 test('文件中间件嵌套', middleware($file1, $wrap, fn($next) => 'end'), 'f1((end))f1');
 test('文件中间件阻断', middleware($file2, $return3), 'f2');  // file2 返回 'f2'，阻断后续
 test('多次调用 $next 被阻止', middleware($multi, fn($next) => 'world'), 'first=world,second=world');
+test();
 // 清理临时文件
 unlink($file1);
 unlink($file2);

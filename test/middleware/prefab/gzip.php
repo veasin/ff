@@ -29,3 +29,4 @@ test('gzip: 压缩后更小时启用压缩', function() {
     $result = middleware(gzip(), fn($next) => $longString);
     return strlen($result);
 }, fn($v) => $v < 1000);
+test();

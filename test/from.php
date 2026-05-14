@@ -55,3 +55,4 @@ container('#in.headers', ['content-type' => 'text/plain']);
 container('#in.raw', 'custom-default');
 container('#in.body', null);
 test('from body - custom default', from(null), ['parsed' => 'custom', 'raw' => 'custom-default', 'RAW' => 'custom-default']);
+test();

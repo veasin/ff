@@ -24,3 +24,4 @@ test('cors: OPTIONS 请求返回 ok',
 		return PHP_SAPI === 'cli' ? ['ok' => true] : null;
 	},
 	fn($v) => $v === ['ok' => true]);
+test();

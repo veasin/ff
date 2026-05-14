@@ -99,3 +99,4 @@ test('路由 - 空路径会错误匹配所有路由', function(){
 		'get:/' => fn($next) => 'root',
 	]);
 }, 'root');  // 期望只匹配 'get:/'
+test();

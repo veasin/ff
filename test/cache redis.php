@@ -79,3 +79,4 @@ test('混合场景 - 验证Redis数据持久化',
 	cache(['fn' => 'Redis', 'key' => 'redis_only_key'], fn($next) => '不应该执行'),
 	'redis数据'
 );
+test();

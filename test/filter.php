@@ -39,4 +39,5 @@ test('bool 转换 on', filter('on', 'bool'), true);
 test('bool 转换 off', filter('off', 'bool'), false);
 test('bool 转换 1', filter(1, 'bool'), true);
 test('bool 转换 0', filter(0, 'bool'), false);
+test();
 

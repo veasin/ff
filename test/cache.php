@@ -92,3 +92,4 @@ test('混合场景 - 带配置名的完整链路',
 	cache('商品详情', ['fn' => 'APCu', 'key' => 'product_789'], ['fn' => 'Redis', 'key' => 'product_789'], fn($next, $keyConfig) => '商品数据:' . $keyConfig),
 	'商品数据:商品详情'
 );
+test();
