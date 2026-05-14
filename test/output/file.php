@@ -9,21 +9,21 @@ file_put_contents($testFile, 'hello file');
 
 output(null, 'file', $testFile);
 ob_start();
-container('#out.render*');
+output();
 $result = ob_get_clean();
 test('file 展示模式', $result, 'hello file');
 
 // 测试2：文件不存在返回404（body为空）
 output(null, 'file', '/path/to/nonexistent');
 ob_start();
-container('#out.render*');
+output();
 $body = ob_get_clean();
 test('file 404 空内容', $body, '');
 
 // 测试3：下载模式
 output(true, 'file', $testFile);
 ob_start();
-container('#out.render*');
+output();
 $content = ob_get_clean();
 test('file 下载内容', $content, 'hello file');
 
@@ -35,7 +35,7 @@ file_put_contents($testFile2, 'array param');
 
 output(null, 'file', ['file' => $testFile2]);
 ob_start();
-container('#out.render*');
+output();
 $result2 = ob_get_clean();
 test('file 数组传参', $result2, 'array param');
 

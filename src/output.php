@@ -15,31 +15,26 @@ use function nx\output\{file, http, view, json};
  * @return null
  */
 function output(mixed $data = null, int|string|null $mode = 200, array|string|null $responseSet = []): null{
-	if(0 === func_num_args()){
+	static $render =function(){
 		$response = container('#out.response');
-		if(!$response) container('#out.response', [...$responseSet, 'code' => 404, 'format' => 'http']);
-		if(!container('#out.render')){
-			container('#out.render',
-				function(){
-					$response = container('#out.response');
-					$formats = [
-						'json' => json(...),
-						'view' => view(...),
-						'file' => file(...),
-						'http' => http(...),
-						...(container('#out.formats') ?? []),
-					];
-					return $formats[$response['format'] ?? 'json']($response, $formats);
-				});
-		}
+		$formats = [
+			'json' => json(...),
+			'view' => view(...),
+			'file' => file(...),
+			'http' => http(...),
+			...(container('#out.formats') ?? []),
+		];
+		return $formats[$response['format'] ?? 'json']($response, $formats);
+	};
+	if(0 === func_num_args()){
+		if(!container('#out.response')) container('#out.response', [...$responseSet, 'code' => 404, 'format' => 'http']);
+		if(!container('#out.render')) container('#out.render', $render);
 		return container('#out.render*');
 	}
-	$statusCode = is_numeric($mode) ? $mode : 200;
 	$format = is_string($mode) ? $mode : null;
 	if('view' === $format || 'file' === $format){
 		if(is_string($responseSet)) [$file, $responseSet] = [$responseSet, []];
 		else $file = $responseSet['file'] ?? null;
 	}
-	container('#out.response', [...$responseSet, 'body' => $data, 'code' => $statusCode, 'format' => $format, 'file' => $file ?? null]);
-	return null;
+	return container('#out.response', [...$responseSet, 'body' => $data, 'code' => is_numeric($mode) ? $mode : 200, 'format' => $format, 'file' => $file ?? null]);
 }
