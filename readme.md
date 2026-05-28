@@ -134,6 +134,24 @@ container('#method', 'put');
 
 > 缓存键：`#method`
 
+#### safe - 安全调用
+
+封装 try/catch 模式，失败返回 null，省去重复的异常处理模板代码。
+
+```php
+// 无参调用
+$users = safe(fn() => db('SELECT * FROM users'));
+
+// 带参数调用
+$user = safe(fn($id) => db('SELECT * FROM users WHERE id=?', [$id]), 1);
+
+// 多参数
+$result = safe(fn($a, $b) => $a / $b, 10, 0);  // 返回 null
+
+// 异常时静默降级
+$data = safe(fn() => json_decode($raw, true, 512, JSON_THROW_ON_ERROR));
+```
+
 #### from - 从指定来源获取原始值，支持来源：query|cookie|file|params|header|input|body
 
 ```php
