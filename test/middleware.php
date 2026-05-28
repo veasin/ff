@@ -1,6 +1,6 @@
 <?php
 // 测试文件：test_middleware.php
-include __DIR__ . "/../vendor/autoload.php";
+include __DIR__ . "/_boot.php";
 
 use function nx\{middleware, test};
 

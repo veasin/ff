@@ -1,6 +1,6 @@
 <?php
 // serve.php 测试
-include __DIR__ . "/../../../vendor/autoload.php";
+include __DIR__ . "/../../_boot.php";
 
 use function nx\{middleware, test, container, from};
 use function nx\middleware\prefab\serve;

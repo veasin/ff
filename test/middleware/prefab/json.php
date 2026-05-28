@@ -1,6 +1,6 @@
 <?php
 // json.php 测试
-include __DIR__ . "/../../../vendor/autoload.php";
+include __DIR__ . "/../../_boot.php";
 
 use function nx\{middleware, test, container};
 use function nx\middleware\prefab\json;

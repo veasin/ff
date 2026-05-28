@@ -1,5 +1,5 @@
 <?php
-include __DIR__ . "/../vendor/autoload.php";
+include __DIR__ . "/_boot.php";
 
 use function nx\test;
 
@@ -22,7 +22,7 @@ test('字符串包含', 'hello world', function($value){
 	return str_contains($value, 'world') && strlen($value) > 5;
 });
 // 故意失败一个测试 - 显示红色
-test('失败示例', 100, 200);
+//test('失败示例', 100, 200);
 // 另一个失败示例 - 显示红色
-test('类型比较', '123', 123);
+//test('类型比较', '123', 123);
 test();

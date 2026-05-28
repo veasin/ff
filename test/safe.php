@@ -1,5 +1,5 @@
 <?php
-include __DIR__ . "/../vendor/autoload.php";
+include __DIR__ . "/_boot.php";
 
 use function nx\safe;
 use function nx\test;

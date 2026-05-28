@@ -23,41 +23,11 @@
       "nx\\":"src/"
     },
     "files":[
-      "src/hook.php",
-      "src/test.php",
-      "src/env.php",
-      "src/container.php",
-      "src/filter.php",
-      "src/args.php",
-      "src/from.php",
-      "src/input.php",
-      "src/output/http.php",
-      "src/output/json.php",
-	  "src/output/file.php",
-      "src/output/view.php",
-      "src/output.php",
-      "src/name.php",
-      "src/hump.php",
-      "src/middleware.php",
-      "src/route.php",
-      "src/db.php",
-      "src/cache.php",
-      "src/cache/apcu.php",
-      "src/cache/redis.php",
-      "src/safe.php",
-      "src/log.php",
-      "src/middleware/prefab/auth/basic.php",
-      "src/middleware/prefab/auth/token.php",
-      "src/middleware/prefab/auth/jwt.php",
-      "src/middleware/prefab/auth/apikey.php",
-      "src/middleware/prefab/cors.php",
-      "src/middleware/prefab/csrf.php",
-      "src/middleware/prefab/error.php",
-      "src/middleware/prefab/gzip.php",
-      "src/middleware/prefab/json.php",
-      "src/middleware/prefab/log.php",
-      "src/middleware/prefab/rate.php",
-      "src/middleware/prefab/serve.php"
+      "dist/nx.php"
     ]
+  },
+  "scripts": {
+	"build":"php tools/build.php",
+	"build-test":"php tools/build-test.php"
   }
 }
