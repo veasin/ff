@@ -6,7 +6,7 @@ namespace nx;
  * @param string|null|array $name   键名，null 时返回整个来源
  * @param string|array      $source 来源名称或直接使用数组 query|cookie|file|params|header|input|body
  * @return mixed
- * @see input() 推荐使用此函数获取带验证的输入
+ * @see     input() 推荐使用此函数获取带验证的输入
  * @internal请使用 input() 替代，from() 仅返回原始数据无验证
  */
 function from(string|null|array $name, string|array $source = 'body'): mixed{
@@ -25,7 +25,7 @@ function from(string|null|array $name, string|array $source = 'body'): mixed{
 		return $result;
 	}
 	static $getInput = function(){
-		$result = PHP_SAPI === 'cli'
+		$result = container('#mode:cli')
 			? [
 				'method' => 'cli',
 				'protocol' => null,
@@ -44,10 +44,11 @@ function from(string|null|array $name, string|array $source = 'body'): mixed{
 	};
 	static $getHeaders = function(){
 		$headers = null;
-		if(function_exists('getallheaders')) {
+		if(function_exists('getallheaders')){
 			$_headers = getallheaders();
 			foreach($_headers as $name => $value) $headers[strtolower($name)] = $value;
-		}else{
+		}
+		else{
 			foreach($_SERVER as $n => $v){
 				if(str_starts_with($n, 'HTTP_')) $headers[str_replace(' ', '-', strtolower(str_replace('_', ' ', substr($n, 5))))] = $v;
 			}

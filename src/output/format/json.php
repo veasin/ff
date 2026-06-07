@@ -1,12 +1,12 @@
 <?php
-namespace nx\output;
+declare(strict_types=1);
+namespace nx\output\format;
 /**
- * @param $response
- * @param $formats
- * @return void
+ * @param array $response
+ * @return array
  * @internal
  */
-function json($response, $formats): void{
+function json(array $response): array{
 	if(null !== ($response['body'] ?? null)){
 		$response['headers'] = [...($response['headers'] ?? []), 'Content-Type' => 'application/json; charset=UTF-8'];
 		$options = JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES;
@@ -18,5 +18,5 @@ function json($response, $formats): void{
 			$response['message'] = $e->getMessage();
 		}
 	}
-	$formats['http']($response);
+	return $response;
 }

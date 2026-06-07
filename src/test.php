@@ -12,16 +12,18 @@ namespace nx;
  * test();                                     // 执行所有测试并输出
  * ```
  * CLI 下彩色输出，非 CLI 下纯文本输出。
- * @param string $label  测试用例的标识名称，不传时执行所有测试并输出
- * @param mixed  $value  待测试的值。如果是闭包，则取返回值
- * @param mixed  $assign 预期值或断言函数。如果是闭包，接收实际值返回 bool
+ * @param string|null $label  测试用例的标识名称，不传时执行所有测试并输出
+ * @param mixed       $value  待测试的值。如果是闭包，则取返回值
+ * @param mixed       $assign 预期值或断言函数。如果是闭包，接收实际值返回 bool
  * @return void
  */
-function test(string $label = null, mixed $value = null, mixed $assign = null): void{
+function test(?string $label = null, mixed $value = null, mixed $assign = null): void{
 	static $colors = [32, 31, 33, 90];
-	static $c = fn(string $text, int $color = 0) => PHP_SAPI === 'cli' ? "\033[$colors[$color]m$text\033[0m" : $text;
+	static $c = fn(string $text, int $color = 0) => container('#mode:cli') ? "\033[$colors[$color]m$text\033[0m" : $text;
 	static $cases = [];
+	static $shutdown = false;
 	if(0 === func_num_args()){
+		if(empty($cases)) return;
 		$total = count($cases);
 		$passed = 0;
 		$failed = [];
@@ -40,7 +42,12 @@ function test(string $label = null, mixed $value = null, mixed $assign = null): 
 			}
 			echo $c("● 测试失败", 1) . $c(": ", 2) . $c(count($failed), 1) . $c(", ", 2) . $c($passed) . $c("/$total", 2) . "\n";
 		}
+		$cases = [];
 		return;
+	}
+	if(!$shutdown && !container('#mode:worker')){
+		$shutdown = true;
+		register_shutdown_function(fn() => test());
 	}
 	$cases[] = [$label, $value, $assign];
 }

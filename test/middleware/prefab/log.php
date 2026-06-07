@@ -6,9 +6,9 @@ use function nx\{middleware, test, container, log as nxlog};
 use function nx\middleware\prefab\log as mw_log;
 
 $logged = [];
-container('#log', ['fn' => function($level, $message, $context) use (&$logged){
+container('#log', function($level, $message, $context) use (&$logged){
 	$logged[] = ['level' => $level, 'message' => $message, 'context' => $context];
-}]);
+});
 
 test('log: 记录请求方法',
 	function() use (&$logged){

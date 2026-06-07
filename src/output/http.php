@@ -1,14 +1,15 @@
 <?php
+declare(strict_types=1);
 namespace nx\output;
 
 use function nx\{container, from};
 
 /**
- * @param $response
+ * @param array $response
  * @return void
  * @internal
  */
-function http($response): void{
+function http(array $response): void{
 	$status = $response['code'] ?? (null !== ($response['body'] ?? null) ? 200 : 404);
 	$message = " $status " . ($response['message'] ?? '');
 	if(!headers_sent()){

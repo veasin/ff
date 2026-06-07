@@ -21,7 +21,7 @@ test('cors: 自定义 origin',
 test('cors: OPTIONS 请求返回 ok',
 	function(){
 		// CLI 模式下 from('method', 'input') 返回 'cli'，无法测试 OPTIONS
-		return PHP_SAPI === 'cli' ? ['ok' => true] : null;
+		return container('#mode:cli') ? ['ok' => true] : null;
 	},
 	fn($v) => $v === ['ok' => true]);
 test();

@@ -41,6 +41,7 @@ namespace nx;
  *                            - 选项以键值对形式存储，布尔选项值为 `true`
  *                            - 无标记参数以数字索引存储
  *                            - 例如: `['v' => true, 'file' => 'test.php', 0 => 'arg1']`
+ * @internal
  * @see   https://www.php.net/manual/en/features.commandline.php PHP命令行用法
  * @see   https://www.gnu.org/software/libc/manual/html_node/Argument-Syntax.html GNU参数语法标准
  */

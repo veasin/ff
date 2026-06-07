@@ -1,18 +1,17 @@
 <?php
-namespace nx\output;
+declare(strict_types=1);
+namespace nx\output\format;
 /**
- * @param $response
- * @param $formats
- * @return void
+ * @param array $response
+ * @return array
  * @internal
  */
-function file($response, $formats): void{
+function file(array $response): array{
 	$path = $response['file'] ?? null;
 	if(!$path || !file_exists($path)){
 		$response['code'] = 404;
 		$response['body'] = '';
-		$formats['http']($response);
-		return;
+		return $response;
 	}
 	$download = $response['body'] ?? false;
 	$response['body'] = file_get_contents($path);
@@ -24,5 +23,5 @@ function file($response, $formats): void{
 		$response['headers']['Content-Disposition'] = 'attachment; filename="' . $filename . '"';
 		$response['headers']['Content-Length'] = filesize($path);
 	}
-	$formats['http']($response);
+	return $response;
 }

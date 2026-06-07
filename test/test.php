@@ -21,8 +21,8 @@ test('数组比较', ['a' => 1, 'b' => 2], ['a' => 1, 'b' => 2]);
 test('字符串包含', 'hello world', function($value){
 	return str_contains($value, 'world') && strlen($value) > 5;
 });
-// 故意失败一个测试 - 显示红色
-test('失败示例', 100, 200);
-// 另一个失败示例 - 显示红色
-test('类型比较', '123', 123);
+// 闭包作为value - 通过
+test('乘法函数', fn() => 3 * 4, 12);
+// 严格类型比较 - 通过
+test('类型比较', '123', '123');
 test();
