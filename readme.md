@@ -482,26 +482,62 @@ $affected = db(sql::table('users')->where(['id' => 1])->update(['name' => 'Jane'
 $affected = db(sql::table('users')->where(['id' => 1])->delete(), 'count');
 ```
 
+#### i18n - 多语言翻译
+
+支持占位符替换和强制语言，框架翻译键格式 `#模块:key`。
+
+```php
+// 设置当前语言
+i18n(lang: 'en_US');
+
+// 框架翻译
+$msg = i18n('#error:internal');
+$msg = i18n('#error:internal', 'en_US');             // 强制语言
+
+// 用户翻译 + {name} 占位符
+$msg = i18n('welcome', ['name' => '张三']);
+$msg = i18n('welcome', ['name' => 'Alice'], 'en_US'); // 强制语言
+
+// . 自动转 _
+$msg = i18n('dot.key');  // 等同 i18n('dot_key')
+```
+
+框架默认翻译内置容器 core，用户可增量覆盖：
+```php
+container('i18n.zh_CN.#error:internal', '自定义');
+container('^i18n.lang', 'en_US');  // 持久化
+```
+
 #### test - 轻量级测试
+
+支持直接比较、闭包断言和异常类型断言。
 
 ```php
 // 直接比较
 test('数字比较', 5, 5);
 
-// 函数返回值
-test('函数返回值', fn() => 2+2, 4);
+// value 是闭包
+test('加法', fn() => 2+2, 4);
 
-// 断言函数
+// assign 是断言函数
 test('范围判断', 10, fn($v) => $v > 5);
 
-// 数组验证
-test('数组验证', ['a' => 1], function($value) {
-    return isset($value['a']) && $value['a'] === 1;
-});
+// 异常类型断言（auto instanceof）
+test('除零类型', fn() => 1/0, DivisionByZeroError::class);
 
-// 函数作为待测值
-test('函数返回值测试', fn() => 2+2, 4);
+// 闭包处理异常
+test('除零', fn() => 1/0, fn($v) => $v instanceof DivisionByZeroError);
+
+// 执行所有测试并输出
+test();
 ```
+
+value/assign 执行中抛异常被捕获，异常对象参与比较（异常 vs 具体值必然失败），输出时显示异常 message。
+
+输出支持 ANSI 颜色标记：
+- 小写=标准色：`k`黑 `r`红 `g`绿 `y`黄 `b`蓝 `m`品 `c`青 `w`白 `n`灰
+- 大写=亮色：`K`亮黑 `R`亮红 `G`亮绿 `Y`亮黄 `B`亮蓝 `M`亮品 `C`亮青 `W`亮白
+- `[r:w]` 前景红底白，`[ :]` 重置前景，`[: ]` 重置背景，`[ : ]` 重置全部，`[:]` 重置全部简写
 
 #### name - 命名配置管理
 

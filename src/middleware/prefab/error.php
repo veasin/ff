@@ -1,6 +1,6 @@
 <?php
 namespace nx\middleware\prefab;
-use function nx\{from, container, output};
+use function nx\{from, container, output, i18n};
 
 /**
  * 统一异常处理中间件
@@ -22,7 +22,7 @@ function error(bool $debug = false): callable{
 				'file' => $e->getFile(),
 				'line' => $e->getLine(),
 				'trace' => $e->getTraceAsString(),
-			] : ['error' => 'Internal server error'];
+			] : ['error' => i18n('#error:internal')];
 			if($debug) $body['type'] = get_class($e);
 			return output($body, $debug ? 500 : ($e->getCode() ?: 500));
 		}

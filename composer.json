@@ -36,6 +36,7 @@
 	  "src/output/format/file.php",
       "src/output/format/view.php",
       "src/output.php",
+      "src/i18n.php",
       "src/name.php",
       "src/hump.php",
       "src/middleware.php",

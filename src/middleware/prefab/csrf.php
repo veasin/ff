@@ -1,7 +1,7 @@
 <?php
 namespace nx\middleware\prefab;
 
-use function nx\{container, from, output};
+use function nx\{container, from, output, i18n};
 
 /**
  * CSRF 防护中间件
@@ -19,7 +19,7 @@ function csrf(bool $verify = false): callable{
 	return function($next) use ($verify){
 		$token = from('_token', 'body') ?? from('X-CSRF-Token', 'header');
 		$sessionToken = container('#mw:csrf:token');
-		if($verify && ($token !== $sessionToken)) return output(null, 419, ['message' => 'CSRF token mismatch']);
+		if($verify && ($token !== $sessionToken)) return output(null, 419, ['message' => i18n('#error:csrf_mismatch')]);
 		$newToken = $sessionToken ?? bin2hex(random_bytes(32));
 		container('#mw:csrf:token', $newToken);
 		$result = $next();

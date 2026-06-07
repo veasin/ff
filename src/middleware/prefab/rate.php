@@ -1,6 +1,6 @@
 <?php
 namespace nx\middleware\prefab;
-use function nx\{from, output, container};
+use function nx\{from, output, container, i18n};
 
 /**
  * 接口限流中间件
@@ -35,7 +35,7 @@ function rate(int $maxRequests = 60, int $windowSeconds = 60, string $key = 'rat
 		}
 		$now = time();
 		$timestamps = array_filter($timestamps, fn($t) => $t > $now - $windowSeconds);
-		if(count($timestamps) >= $maxRequests) return output(null, 429, ['message' => 'Too many requests.']);
+		if(count($timestamps) >= $maxRequests) return output(null, 429, ['message' => i18n('#error:rate_limit')]);
 		$timestamps[] = $now;
 		if($storage){
 			$storage($cacheKey, $timestamps, $windowSeconds);

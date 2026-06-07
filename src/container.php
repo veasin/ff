@@ -28,7 +28,40 @@ namespace nx;
  * @return mixed 读取时返回值，设置时返回 void
  */
 function container(array|string|null $key = null, mixed $value = null): mixed{
-	static $core = ['#mode:cli' => PHP_SAPI === 'cli'], $persist = [], $request = [];
+	static $core = [
+		'#mode:cli' => PHP_SAPI === 'cli',
+		'i18n' => [
+			'lang' => 'zh_CN',
+			'zh_CN' => [
+				'#error:internal' => '服务器内部错误',
+				'#error:rate_limit' => '请求过于频繁，请稍后再试',
+				'#error:csrf_mismatch' => 'CSRF 令牌不匹配',
+				'#auth:apikey_required' => '需要 API Key',
+				'#auth:realm_basic' => '需要认证',
+				'#auth:realm_token' => '需要 Token 认证',
+				'#auth:realm_jwt' => '需要 JWT 认证',
+				'#container:key_empty' => '键名不能为空',
+				'#container:star_warn' => 'container 写入操作带 * 后缀无效: {key}',
+				'#test:passed' => '[g]✔ 全部通过[y]: {passed}/{total}',
+				'#test:failed' => '[r]● 测试失败[y]: {count}, [g]{passed}[y]/{total}',
+				'#test:case' => "[r]▶ {label}\n\t[n]预期: {expected}\n\t[n]实际: {actual}",
+			],
+			'en_US' => [
+				'#error:internal' => 'Internal server error',
+				'#error:rate_limit' => 'Too many requests. Please try again later.',
+				'#error:csrf_mismatch' => 'CSRF token mismatch',
+				'#auth:apikey_required' => 'API Key required',
+				'#auth:realm_basic' => 'Authentication required',
+				'#auth:realm_token' => 'Token authentication required',
+				'#auth:realm_jwt' => 'JWT authentication required',
+				'#container:key_empty' => 'Key cannot be empty',
+				'#container:star_warn' => 'container write with * suffix has no effect: {key}',
+				'#test:passed' => '[g]✔ All passed[y]: {passed}/{total}',
+				'#test:failed' => '[r]● Test failed[y]: {count}, [g]{passed}[y]/{total}',
+				'#test:case' => "[r]▶ {label}\n\t[n]Expected: {expected}\n\t[n]Actual: {actual}",
+			],
+		],
+	], $persist = [], $request = [];
 	static $get = fn(array $arr, string $k) => array_reduce(explode('.', $k), fn($c, $p) => is_array($c) ? ($c[$p] ?? null) : null, $arr);
 	static $set = function(array &$arr, string $k, mixed $v): void{
 		$parts = explode('.', $k);

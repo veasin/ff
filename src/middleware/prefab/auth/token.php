@@ -1,7 +1,7 @@
 <?php
 namespace nx\middleware\prefab;
 
-use function nx\{container, from, output};
+use function nx\{container, from, output, i18n};
 
 /**
  * Token 认证中间件
@@ -19,7 +19,7 @@ function token(string $prefix = '#mw:auth', string $headerName = 'Authorization'
 		if(container("$prefix:user")) return $next();
 		$rawToken = from($headerName, 'header') ?? from('token', 'query');
 		$token = str_starts_with($rawToken, 'Bearer ') ? substr($rawToken, 7) : $rawToken;
-		if(!$token) return output(null, 401, ['headers' => ['WWW-Authenticate' => 'Bearer realm="token"']]);
+		if(!$token) return output(null, 401, ['headers' => ['WWW-Authenticate' => 'Bearer realm="' . i18n('#auth:realm_token') . '"']]);
 		foreach(container("$prefix:validators") ?? [] as $validator){
 			$result = $validator($token);
 			if($result){
