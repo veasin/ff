@@ -91,6 +91,54 @@ test('路由 - 多路由调用', function(){
 	return $result2;  // 只返回最后匹配的
 }, 'create');
 
+test('路由 - 延时模式：收集单路由并触发执行', function(){
+	container(null);
+	container("#in.input", ['method' => 'get', 'uri' => '/api/items', 'params' => []]);
+	route(true);
+	route('get:/api/items', fn($next) => 'deferred');
+	return route();
+}, 'deferred');
+test('路由 - 延时模式：收集数组路由并触发执行', function(){
+	container(null);
+	container("#in.input", ['method' => 'post', 'uri' => '/api/create', 'params' => []]);
+	route(true);
+	route([
+		'get:/api/list' => fn($next) => 'list',
+		'post:/api/create' => fn($next) => 'create',
+	]);
+	return route();
+}, 'create');
+test('路由 - 延时模式：混合单路由和数组路由', function(){
+	container(null);
+	container("#in.input", ['method' => 'put', 'uri' => '/api/items/5', 'params' => []]);
+	route(true);
+	route('get:/api/items', fn($next) => 'list');
+	route('put:/api/items/:id', fn($next) => 'update');
+	route('delete:/api/items/:id', fn($next) => 'delete');
+	return route();
+}, 'update');
+test('路由 - 延时模式：不匹配返回null', function(){
+	container(null);
+	container("#in.input", ['method' => 'get', 'uri' => '/api/posts', 'params' => []]);
+	route(true);
+	route('get:/api/items', fn($next) => 'items');
+	route('post:/api/items', fn($next) => 'create');
+	return route();
+}, null);
+test('路由 - 延时模式：未开启时route()无效应返回null', function(){
+	container(null);
+	container("#in.input", ['method' => 'get', 'uri' => '/api/items', 'params' => []]);
+	return route();
+}, null);
+test('路由 - 延时模式：可多次开启', function(){
+	container(null);
+	container("#in.input", ['method' => 'get', 'uri' => '/api/users', 'params' => []]);
+	route(true);
+	route('get:/api/items', fn($next) => 'items');
+	route(true);  // 第二次开启，清空之前收集的
+	route('get:/api/users', fn($next) => 'users');
+	return route();
+}, 'users');
 test('路由 - 空路径会错误匹配所有路由', function(){
 	container(null);
 	container("#in.input", ['method' => 'get', 'uri' => '/', 'params' => []]);

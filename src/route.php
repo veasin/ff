@@ -6,11 +6,36 @@ namespace nx;
  * - 行尾 /* 匹配剩余所有路径段
  * - 中间 * 匹配单个路径段
  * 依次遍历每条路由，按配置顺序收集所有匹配的 handler 执行。
- * @param string|array $match  匹配规则或路由映射数组
- * @param callable     ...$fns 路由处理函数列表
+ * 延时执行模式：
+ * ```
+ * route(true);                          // 开启延时模式
+ * route('GET:/api/items', fn($next) => ...);  // 收集但不执行
+ * route('POST:/api/items', function($next) { ... });
+ * route();                               // 触发执行所有收集的路由
+ * ```
+ * @param null|bool|string|array $match  匹配规则或路由映射数组
+ *                                         true=开启延时模式
+ *                                         null=触发延时执行
+ * @param callable              ...$fns  路由处理函数列表
  * @return mixed
  */
-function route(string|array $match, callable ...$fns): mixed{
+function route(null|bool|string|array $match = null, callable ...$fns): mixed{
+	if($match === true) return container('#route.deferred', []);
+	if($match === null){
+		$deferred = container('#route.deferred');
+		if(!is_array($deferred)) return null;
+		container('#route.deferred', null);
+		$routes = [];
+		foreach($deferred as $item) $routes[$item[0]] = $item[1];
+		return $routes ? route($routes) : null;
+	}
+	$deferred = container('#route.deferred');
+	if(is_array($deferred)){
+		if(is_array($match)){
+			foreach($match as $m => $fn) $deferred[] = [$m, $fn];
+		}else if($fns) $deferred[] = [$match, count($fns) === 1 ? $fns[0] : $fns];
+		return container('#route.deferred', $deferred);
+	}
 	$handlers = [];
 	$currentMethod = from('method', 'input');
 	$params = from('params', 'input') ?? [];

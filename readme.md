@@ -351,6 +351,20 @@ route('GET:/api/*', function() {
 // CLI 路由
 route('cli:verbose', function() { /* ... */ });
 route('cli:file=*', function() { /* ... */ });
+
+// 延时执行模式：先收集再统一触发
+route(true);                          // 开启延时模式
+route('GET:/api/items', fn($next) => output(loadItems()));
+route('POST:/api/items', function($next) { /* ... */ });
+route();                               // 触发执行所有收集的路由
+
+// 延时模式下也支持数组路由
+route(true);
+route([
+    'get:/api/list'   => fn($next) => output(loadItems()),
+    'post:/api/create' => fn($next) => output(createItem()),
+]);
+route();
 ```
 
 #### cache - 多级缓存
