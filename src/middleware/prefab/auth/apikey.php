@@ -20,7 +20,7 @@ function apikey(string $prefix = '#mw:auth', string $headerName = 'X-API-Key', s
 	return function($next) use ($prefix, $headerName, $queryName){
 		if(container("$prefix:user")) return $next();
 		$apiKey = from($headerName, 'header') ?? from($queryName, 'query');
-		if(!$apiKey) return output(null, 401, ['headers' => ['X-API-Key' => i18n('#auth:apikey_required')]]);
+		if(!$apiKey) return output(null, ['code' => 401, 'headers' => ['X-API-Key' => i18n('#auth:apikey_required')]]);
 		foreach(container("$prefix:validators") ?? [] as $validator){
 			$result = $validator($apiKey);
 			if($result){

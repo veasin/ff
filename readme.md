@@ -117,23 +117,6 @@ $args = args('--message="Hello World" --path=\'/usr/local\'');
 // 结果: ['message' => 'Hello World', 'path' => '/usr/local']
 ```
 
-#### method - HTTP方法获取/检查
-
-```php
-// 获取当前请求方法
-$method = method();  // 返回: 'get', 'post', 'cli' 等
-
-// 检查是否匹配指定方法
-if (method('POST')) {
-    // 处理 POST 请求
-}
-
-// 预置请求方法（通过容器）
-container('#method', 'put');
-```
-
-> 缓存键：`#method`
-
 #### safe - 安全调用
 
 封装 try/catch 模式，失败返回 null，省去重复的异常处理模板代码。
@@ -272,41 +255,46 @@ hook('custom');
 
 #### output - 输出数据
 
+支持多种格式和模板，核心签名 `output($data, $set)`。
+
 ```php
-// JSON 输出
+// 默认 JSON 输出
 output(['status' => 'ok', 'data' => [1, 2, 3]]);
 
-// 设置状态码
-output(['error' => 'not found'], 404);
+// 只设置状态码（int 简写）
+output(null, 201);
 
-// 指定格式输出
-output($data, 'json');
+// 使用 Status enum
+output(Status::NotFound);
 
-// 输出视图
-output($viewData, 'view', 'template.php');
-output($viewData, 'view', ['file' => 'template.php']);
+// 指定格式（array 完整配置）
+output($data, ['type' => 'json']);
+output($data, ['type' => 'view', 'file' => 'template.php']);
+output($data, ['type' => 'file', 'file' => '/path/to/photo.jpg']);
 
-// 文件输出（展示文件）
-output(null, 'file', '/path/to/file.pdf');
+// 状态码+数据
+output($data, ['code' => 201]);
+output($data, ['code' => 201, 'headers' => ['X-Custom' => 'v']]);
 
-// 文件下载
-output(true, 'file', '/path/to/file.pdf');
+// 状态码 int 简写
+output($data, 201);
 
-// 带响应头
-output(['token' => $token], 200, ['Authorization' => 'Bearer xxx']);
+// 视图模板 string 简写
+output($data, 'template.php');
 
-// 无参调用触发输出（用于 worker 模式显式发送）
+// 文件下载（body=true 触发 Content-Disposition: attachment）
+output(true, ['type' => 'file', 'file' => '/path/to/file.pdf']);
+
+// 无参触发发送
 output();
 
-// 扩展输出格式（通过容器配置 #out.formats）
-container('#out.formats', [
-    'xml' => function($response, $formats) {
-        $response['headers']['Content-Type'] = 'application/xml';
-        $response['body'] = xml_encode($response['body']);
-        $formats['http']($response, $formats);
-    },
-]);
-output($data, 'xml');
+// 扩展输出格式
+container('#out.type.xml', function(array $response): array {
+    $response['headers']['Content-Type'] = 'application/xml';
+    $response['body'] = xml_encode($response['body']);
+    return $response;
+});
+output($data, ['type' => 'xml']);
 
 // 自定义渲染回调
 container('#out.callback', function($response) {
@@ -314,7 +302,18 @@ container('#out.callback', function($response) {
 });
 ```
 
-> 扩展方式：`container('#out.formats', [...])`  
+**$set 数组键说明：**
+
+| 键 | 类型 | 默认值 | 说明 |
+|---|---|---|---|
+| `code` | int | `200` | HTTP 状态码 |
+| `type` | string | `'json'` | 输出格式，内置 `json`/`view`/`file`，或自定义 |
+| `file` | string | - | 文件路径：`type=view` 时作模板，`type=file` 时作下载文件 |
+| `headers` | array | `[]` | HTTP 响应头键值对 |
+| `message` | string | `''` | HTTP 状态消息 |
+| `pretty` | bool | `false` | JSON 是否美化输出 |
+
+> 扩展格式：`container('#out.type.{name}', fn(array $response): array => $response)`  
 > 回调方式：`container('#out.callback', fn($response) => ...)`
 
 #### route - 路由匹配
@@ -357,6 +356,9 @@ route(true);                          // 开启延时模式
 route('GET:/api/items', fn($next) => output(loadItems()));
 route('POST:/api/items', function($next) { /* ... */ });
 route();                               // 触发执行所有收集的路由
+
+// 清空已收集的路由
+route(null);
 
 // 延时模式下也支持数组路由
 route(true);

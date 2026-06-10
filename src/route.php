@@ -5,23 +5,31 @@ namespace nx;
  * 路由格式: method:/path，支持 :param 和 {param} 参数，* 通配符
  * - 行尾 /* 匹配剩余所有路径段
  * - 中间 * 匹配单个路径段
- * 依次遍历每条路由，按配置顺序收集所有匹配的 handler 执行。
+ * 0 参触发：route() 延时执行收集的路由
+ * bool 开关：route(true) 开启延时模式
+ * null 清空：route(null) 清空已收集的路由
+ *
  * 延时执行模式：
  * ```
- * route(true);                          // 开启延时模式
- * route('GET:/api/items', fn($next) => ...);  // 收集但不执行
+ * route(true);                               // 开启延时模式
+ * route('GET:/api/items', fn($next) => ...); // 收集但不执行
  * route('POST:/api/items', function($next) { ... });
- * route();                               // 触发执行所有收集的路由
+ * route();                                    // 触发执行所有收集的路由
+ * route(null);                                // 清空收集的路由
+ * ```
+ * 立即执行模式：
+ * ```
+ * route('GET:/api/items', fn($next) => output(loadItems()));
+ * route(['GET:/list' => fn($next) => ..., 'POST:/create' => fn($next) => ...]);
  * ```
  * @param null|bool|string|array $match  匹配规则或路由映射数组
- *                                         true=开启延时模式
- *                                         null=触发延时执行
+ *                                        true=开启延时模式
+ *                                        null=清空已收集路由
  * @param callable              ...$fns  路由处理函数列表
  * @return mixed
  */
 function route(null|bool|string|array $match = null, callable ...$fns): mixed{
-	if($match === true) return container('#route.deferred', []);
-	if($match === null){
+	if(0 === func_num_args()){
 		$deferred = container('#route.deferred');
 		if(!is_array($deferred)) return null;
 		container('#route.deferred', null);
@@ -29,6 +37,8 @@ function route(null|bool|string|array $match = null, callable ...$fns): mixed{
 		foreach($deferred as $item) $routes[$item[0]] = $item[1];
 		return $routes ? route($routes) : null;
 	}
+	if($match === true) return container('#route.deferred', []);
+	if($match === null) return container('#route.deferred', null);
 	$deferred = container('#route.deferred');
 	if(is_array($deferred)){
 		if(is_array($match)){

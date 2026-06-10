@@ -27,7 +27,7 @@ function gzip(int $level = 6): callable{
 		$body = is_string($result) ? $result : json_encode($result);
 		$compressed = gzencode($body, $level);
 		if(strlen($body) <= strlen($compressed)) return $result;
-		output(null, 200, ['headers' => ['Content-Encoding' => 'gzip']]);
+		output(null, ['code' => 200, 'headers' => ['Content-Encoding' => 'gzip']]);
 		return $compressed;
 	};
 }

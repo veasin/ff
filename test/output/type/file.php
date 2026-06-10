@@ -2,7 +2,7 @@
 include __DIR__ . "/../../../vendor/autoload.php";
 
 use function nx\test;
-use function nx\output\format\file;
+use function nx\output\type\file;
 
 $testFile = __DIR__ . '/file_test.txt';
 file_put_contents($testFile, 'hello file');

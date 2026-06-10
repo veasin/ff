@@ -2,7 +2,7 @@
 include __DIR__ . "/../../../vendor/autoload.php";
 
 use function nx\test;
-use function nx\output\format\json;
+use function nx\output\type\json;
 
 $response = ['body' => ['name' => 'test'], 'code' => 200, 'headers' => []];
 $result = json($response);

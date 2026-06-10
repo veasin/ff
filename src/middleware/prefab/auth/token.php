@@ -19,7 +19,7 @@ function token(string $prefix = '#mw:auth', string $headerName = 'Authorization'
 		if(container("$prefix:user")) return $next();
 		$rawToken = from($headerName, 'header') ?? from('token', 'query');
 		$token = str_starts_with($rawToken, 'Bearer ') ? substr($rawToken, 7) : $rawToken;
-		if(!$token) return output(null, 401, ['headers' => ['WWW-Authenticate' => 'Bearer realm="' . i18n('#auth:realm_token') . '"']]);
+		if(!$token) return output(null, ['code' => 401, 'headers' => ['WWW-Authenticate' => 'Bearer realm="' . i18n('#auth:realm_token') . '"']]);
 		foreach(container("$prefix:validators") ?? [] as $validator){
 			$result = $validator($token);
 			if($result){

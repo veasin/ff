@@ -35,7 +35,7 @@ function rate(int $maxRequests = 60, int $windowSeconds = 60, string $key = 'rat
 		}
 		$now = time();
 		$timestamps = array_filter($timestamps, fn($t) => $t > $now - $windowSeconds);
-		if(count($timestamps) >= $maxRequests) return output(null, 429, ['message' => i18n('#error:rate_limit')]);
+		if(count($timestamps) >= $maxRequests) return output(null, ['code' => 429, 'message' => i18n('#error:rate_limit')]);
 		$timestamps[] = $now;
 		if($storage){
 			$storage($cacheKey, $timestamps, $windowSeconds);
