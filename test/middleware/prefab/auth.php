@@ -14,7 +14,7 @@ test('auth: 未认证返回401',
 		container('#in.headers', null);
 		$_SERVER['REQUEST_METHOD'] = 'GET';
 		$_SERVER['HTTP_AUTHORIZATION'] = '';
-		middleware(auth(), fn($next) => 'ok');
+		middleware(auth(), 'ok');
 		return container('#out.response.code');
 	},
 	401);
@@ -26,7 +26,7 @@ test('auth: 认证成功返回结果',
 		container('#in.headers', null);
 		$_SERVER['REQUEST_METHOD'] = 'GET';
 		$_SERVER['HTTP_AUTHORIZATION'] = 'Basic ' . base64_encode('admin:123456');
-		return middleware(auth(), fn($next) => 'ok');
+		return middleware(auth(), 'ok');
 	},
 	'ok');
 test('auth: 密码错误返回403',
@@ -37,7 +37,7 @@ test('auth: 密码错误返回403',
 		container('#in.headers', null);
 		$_SERVER['REQUEST_METHOD'] = 'GET';
 		$_SERVER['HTTP_AUTHORIZATION'] = 'Basic ' . base64_encode('admin:wrong');
-		middleware(auth(), fn($next) => 'ok');
+		middleware(auth(), 'ok');
 		return container('#out.response.code');
 	},
 	403);

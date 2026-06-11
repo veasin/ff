@@ -6,9 +6,10 @@ use function nx\{from, container, output, i18n};
  * 统一异常处理中间件
  * 
  * 使用方式:
- * - 调试模式: middleware(error(debug: true), $handler) - 显示完整错误信息
- * - 生产模式: middleware(error(), $handler) - 返回通用错误消息
- * 
+ * ```
+ * middleware(error(debug: true), $handler);//调试模式，显示完整错误信息
+ * middleware(error(), $handler);//生产模式，返回通用错误消息
+ * ```
  * @param bool $debug 是否开启调试模式，默认 false
  * @return callable 中间件函数
  */

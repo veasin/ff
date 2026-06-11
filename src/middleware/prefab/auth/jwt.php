@@ -6,11 +6,13 @@ use function nx\{container, from, output, i18n};
 /**
  * JWT 认证中间件
  * 使用方式:
- * - 设置密钥: container("$prefix:secret", 'your-secret-key')
- * - 设置验证器: container("$prefix:validators", [fn($payload) => $user])
- * - 使用中间件: middleware(jwt(), $handler)
- * - 获取用户: container("$prefix:user")
- * - 获取 payload: container("$prefix:payload")
+ * ```
+ * container('#mw:auth:secret', 'your-secret-key');//设置密钥
+ * container('#mw:auth:validators', [fn($payload) => $user]);//设置验证器
+ * middleware(jwt(), $handler);//使用中间件
+ * container('#mw:auth:user');//获取认证用户
+ * container('#mw:auth:payload');//获取 payload
+ * ```
  * @param string $prefix 前缀，默认 '#mw:auth'
  * @param string $algo   算法，默认 'HS256'
  * @return callable 中间件函数

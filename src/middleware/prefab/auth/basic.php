@@ -6,9 +6,11 @@ use function nx\{container, from, output, i18n};
 /**
  * HTTP Basic 认证中间件
  * 使用方式:
- * - 设置验证器: container("$prefix:validators", [fn($user, $pass) => $user])
- * - 使用中间件: middleware(basic(), $handler)
- * - 获取用户: container("$prefix:user")
+ * ```
+ * container('#mw:auth:validators', [fn($user, $pass) => $user]);//设置验证器
+ * middleware(basic(), $handler);//使用中间件
+ * container('#mw:auth:user');//获取认证用户
+ * ```
  * @param string $prefix 前缀，默认 '#mw:auth'
  * @param string|null $realm  认证领域名称，默认 null 使用 i18n
  * @return callable 中间件函数

@@ -6,8 +6,9 @@ use function nx\{middleware, test, container};
 use function nx\middleware\prefab\error;
 
 // 测试用例
+container('i18n.lang', 'en_US');
 test('error: 正常执行返回结果', function() {
-    return middleware(error(), fn() => 'ok');
+    return middleware(error(), 'ok');
 }, 'ok');
 
 test('error: 异常返回通用错误', function() {

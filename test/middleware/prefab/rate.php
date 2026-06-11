@@ -14,7 +14,7 @@ test('rate: 允许通过请求',
 		});
 		$_SERVER['REMOTE_ADDR'] = '127.0.0.1';
 		container('#in.input', null);
-		return middleware(rate(60, 60, 'test'), fn($next) => 'ok');
+		return middleware(rate(60, 60, 'test'), 'ok');
 	},
 	'ok');
 
@@ -27,8 +27,8 @@ test('rate: 超出限制返回429',
 		});
 		$_SERVER['REMOTE_ADDR'] = '127.0.0.1';
 		container('#in.input', null);
-		middleware(rate(1, 60, 'test'), fn($next) => 'ok');
-		middleware(rate(1, 60, 'test'), fn($next) => 'ok');
+		middleware(rate(1, 60, 'test'), 'ok');
+		middleware(rate(1, 60, 'test'), 'ok');
 		return container('#out.response.code');
 	},
 	429);
@@ -42,9 +42,9 @@ test('rate: 不同IP独立计数',
 		});
 		container('#in.input', null);
 		$_SERVER['REMOTE_ADDR'] = '127.0.0.1';
-		middleware(rate(1, 60, 'ip'), fn($next) => 'ok');
+		middleware(rate(1, 60, 'ip'), 'ok');
 		$_SERVER['REMOTE_ADDR'] = '127.0.0.2';
-		return middleware(rate(1, 60, 'ip'), fn($next) => 'ok');
+		return middleware(rate(1, 60, 'ip'), 'ok');
 	},
 	'ok');
 test();

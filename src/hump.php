@@ -12,6 +12,10 @@ namespace nx;
  * - 函数通过调用 $next 实现嵌套包裹；不调用 $next 则执行完后自动继续链式调用下一个（如果有），
  *   并将当前返回值作为参数传递给下一个。
  * - 返回值取自最后一个执行的函数（即最终结果），若无显式 return 则返回 null。
+ * ```
+ * hump(fn($next, $v) => $next($v + 1), fn($next, $v) => $next($v * 2), 1);//结果: 4
+ * hump('/path/to/file.php');//文件路径
+ * ```
  * @param mixed ...$fns 中间件列表
  * @return mixed 最终结果
  */

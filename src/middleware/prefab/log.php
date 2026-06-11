@@ -6,9 +6,10 @@ use function nx\{from, container, log as nxlog};
  * 请求/响应日志中间件
  * 
  * 使用方式:
- * - 基础使用: middleware(log(), $handler)
- * - 自定义级别: middleware(log('info'), $handler)
- * 
+ * ```
+ * middleware(log(), $handler);//基础使用，默认 info 级别
+ * middleware(log('info'), $handler);//自定义日志级别
+ * ```
  * 日志内容包含:
  * - method: 请求方法
  * - uri: 请求路径

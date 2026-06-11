@@ -17,22 +17,22 @@ container('#in.input', ['method' => 'GET', 'uri' => '/test.txt']);
 
 // 测试用例
 test('serve: 静态文件存在时返回内容', function() use ($testDir) {
-    return middleware(serve($testDir), fn($next) => 'not found');
+    return middleware(serve($testDir), 'not found');
 }, 'test content');
 
 test('serve: 文件不存在时继续下一个', function() use ($testDir) {
     container('#in.input', ['method' => 'GET', 'uri' => '/nonexistent.txt']);
-    return middleware(serve($testDir), fn($next) => 'fallback');
+    return middleware(serve($testDir), 'fallback');
 }, 'fallback');
 
 test('serve: 目录自动追加index.html', function() use ($testDir) {
     container('#in.input', ['method' => 'GET', 'uri' => '/']);
-    return middleware(serve($testDir), fn($next) => 'not found');
+    return middleware(serve($testDir), 'not found');
 }, '<h1>Index</h1>');
 
 test('serve: 设置正确的Content-Type', function() use ($testDir) {
     container('#in.input', ['method' => 'GET', 'uri' => '/test.txt']);
-    middleware(serve($testDir), fn($next) => 'not found');
+    middleware(serve($testDir), 'not found');
     return container('#out.response.headers.Content-Type');
 }, fn($v) => str_starts_with($v, 'text/plain'));
 

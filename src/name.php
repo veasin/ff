@@ -2,9 +2,9 @@
 declare(strict_types=1);
 namespace nx;
 /**
- * 命名配置和管理，统一项目中所有类型的命名规则。通过 container('name') 配置命名模板。
+ * 命名配置和管理，统一项目中所有类型的命名规则。通过 container('#name') 配置命名模板。
  * ```
- * container('name', ['cache' => ['user' => 'cache:user:{uid}']]);
+ * container('#name', ['cache' => ['user' => 'cache:user:{uid}']]);
  * $key = name('user.id');                                        // 返回 'user.id'（无模板）
  * $key = name('user', ['uid' => 123], 'cache');                  // 返回 'cache:user:123'
  * ```

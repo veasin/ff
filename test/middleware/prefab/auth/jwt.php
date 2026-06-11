@@ -22,7 +22,7 @@ test('jwt: 无 token 返回401',
 		container('#out.response', null);
 		container('#in.headers', null);
 		$_SERVER['REQUEST_METHOD'] = 'GET';
-		middleware(jwt(), fn($next) => 'ok');
+		middleware(jwt(), 'ok');
 		return container('#out.response.code');
 	},
 	401);
@@ -37,7 +37,7 @@ test('jwt: 认证成功返回结果',
 		container('#in.headers', null);
 		$_SERVER['REQUEST_METHOD'] = 'GET';
 		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $token;
-		return middleware(jwt(), fn($next) => 'ok');
+		return middleware(jwt(), 'ok');
 	},
 	'ok');
 
@@ -51,7 +51,7 @@ test('jwt: 签名错误返回403',
 		container('#in.headers', null);
 		$_SERVER['REQUEST_METHOD'] = 'GET';
 		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $token;
-		middleware(jwt(), fn($next) => 'ok');
+		middleware(jwt(), 'ok');
 		return container('#out.response.code');
 	},
 	403);

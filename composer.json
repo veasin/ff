@@ -47,6 +47,7 @@
       "src/cache/redis.php",
       "src/safe.php",
       "src/log.php",
+      "src/middleware/prefab/auth.php",
       "src/middleware/prefab/auth/basic.php",
       "src/middleware/prefab/auth/token.php",
       "src/middleware/prefab/auth/jwt.php",

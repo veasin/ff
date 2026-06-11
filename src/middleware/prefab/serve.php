@@ -6,9 +6,10 @@ use function nx\{from, output, container};
  * 静态文件服务中间件
  *
  * 使用方式:
- * - 基础使用: middleware(serve('/var/www/public'), $handler)
- * - 自定义映射: middleware(serve('/var/www/public', ['html' => 'index.php']), $handler)
- *
+ * ```
+ * middleware(serve('/var/www/public'), $handler);//基础使用
+ * middleware(serve('/var/www/public', ['html' => 'index.php']), $handler);//自定义映射
+ * ```
  * 行为:
  * - 根据 URI 查找对应文件
  * - 自动识别常见文件类型并设置正确的 Content-Type
@@ -54,7 +55,7 @@ function serve(string $root, array $map = []): callable{
 		];
 		$contentType = $types[$ext] ?? (mime_content_type($file) || 'application/octet-stream');
 		$content = file_get_contents($file);
-		output($content, 'http', [
+		output($content, [
 			'headers' => [
 				'Content-Type' => $contentType,
 				'Content-Length' => strlen($content),

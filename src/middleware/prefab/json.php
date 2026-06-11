@@ -6,9 +6,10 @@ use function nx\{from, output};
  * 统一 JSON 响应格式中间件
  * 
  * 使用方式:
- * - 默认格式: middleware(json(), $handler)
- * - 格式化输出: middleware(json(pretty: true), $handler)
- * 
+ * ```
+ * middleware(json(), $handler);//默认格式
+ * middleware(json(pretty: true), $handler);//格式化输出
+ * ```
  * 行为:
  * - 统一设置 Content-Type 为 application/json
  * - 自动处理数组和 JSON 字符串

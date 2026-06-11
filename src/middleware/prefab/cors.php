@@ -6,8 +6,10 @@ use function nx\{from, output};
 /**
  * CORS 跨域请求中间件
  * 使用方式:
- * - 基础使用: middleware(cors(), $handler)
- * - 自定义配置: middleware(cors(['origin' => 'https://example.com', 'methods' => 'GET,POST']), $handler)
+ * ```
+ * middleware(cors(), $handler);//基础使用
+ * middleware(cors(['origin' => 'https://example.com', 'methods' => 'GET,POST']), $handler);//自定义配置
+ * ```
  * 配置选项:
  * - origin: 允许的源，默认 '*'
  * - methods: 允许的方法，默认 'GET,POST,PUT,DELETE,OPTIONS'
@@ -28,17 +30,16 @@ function cors(array $options = []): callable{
 	];
 	return function($next) use ($opts){
 		$origin = is_array($opts['origin']) ? ($opts['origin'][array_rand($opts['origin'])] ?? '*') : $opts['origin'];
-		output(null,
-			200,
-			[
-				'headers' => [
-					'Access-Control-Allow-Origin' => $origin,
-					'Access-Control-Allow-Methods' => $opts['methods'],
-					'Access-Control-Allow-Headers' => $opts['headers'],
-					'Access-Control-Allow-Credentials' => $opts['credentials'] ? 'true' : 'false',
-					'Access-Control-Max-Age' => $opts['max-age'],
-				],
-			]);
+		output(null, [
+			'code' => 200,
+			'headers' => [
+				'Access-Control-Allow-Origin' => $origin,
+				'Access-Control-Allow-Methods' => $opts['methods'],
+				'Access-Control-Allow-Headers' => $opts['headers'],
+				'Access-Control-Allow-Credentials' => $opts['credentials'] ? 'true' : 'false',
+				'Access-Control-Max-Age' => $opts['max-age'],
+			],
+		]);
 		return from('method', 'input') === 'OPTIONS' ? ['ok' => true] : $next();
 	};
 }

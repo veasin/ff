@@ -6,10 +6,12 @@ use function nx\{container, from, output, i18n};
 /**
  * API Key 认证中间件
  * 使用方式:
- * - 设置验证器: container("$prefix:validators", [fn($apiKey) => $user])
- * - 使用中间件: middleware(apikey(), $handler)
- * - 获取用户: container("$prefix:user")
- * - 从 header 或 query 参数获取 API Key
+ * ```
+ * container('#mw:auth:validators', [fn($apiKey) => $user]);//设置验证器
+ * middleware(apikey(), $handler);//使用中间件
+ * container('#mw:auth:user');//获取认证用户
+ * ```
+ * 从 header 或 query 参数获取 API Key
  * @param string $prefix 前缀，默认 '#mw:auth'
  * @param string $headerName header 名称，默认 'X-API-Key'
  * @param string $queryName  query 参数名，默认 'api_key'

@@ -6,9 +6,10 @@ use function nx\{from, container, output};
  * Gzip 响应压缩中间件
  * 
  * 使用方式:
- * - 默认压缩: middleware(gzip(), $handler)
- * - 自定义级别: middleware(gzip(9), $handler) - 1-9，越高压缩越好但越慢
- * 
+ * ```
+ * middleware(gzip(), $handler);//默认压缩级别 6
+ * middleware(gzip(9), $handler);//自定义级别 1-9，越高压缩越好但越慢
+ * ```
  * 行为:
  * - 自动检测客户端 Accept-Encoding 请求头
  * - 仅当压缩后比原始内容更小时才启用压缩

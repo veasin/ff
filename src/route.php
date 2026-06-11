@@ -50,9 +50,7 @@ function route(null|bool|string|array $match = null, callable ...$fns): mixed{
 	$handlers = [];
 	$currentMethod = from('method', 'input');
 	$params = from('params', 'input') ?? [];
-	$reqSegments = $currentMethod === 'cli' ? [] : explode('/', parse_url(from('uri', 'input'), PHP_URL_PATH) ?: '/')
-			|> array_filter(...)
-			|> array_values(...);
+	$reqSegments = $currentMethod === 'cli' ? [] : array_values(array_filter(explode('/', parse_url(from('uri', 'input'), PHP_URL_PATH) ?: '/')));
 	foreach(is_array($match) ? $match : [$match => $fns] as $m => $fn){
 		[$method, $uri] = explode(':', $m, 2) + ['', ''];
 		$method = strtolower($method);
@@ -69,11 +67,7 @@ function route(null|bool|string|array $match = null, callable ...$fns): mixed{
 			continue;
 		}
 		if($method !== '*' && $method !== '' && $method !== $currentMethod) continue;
-		$routeSegments = $uri
-				|> trim(...)
-				|> (fn($x) => explode('/', $x))
-				|> array_filter(...)
-				|> array_values(...);
+		$routeSegments = array_values(array_filter(explode('/', trim($uri))));
 		$isWildcard = end($routeSegments) === '*';
 		$reqIndex = 0;
 		$param = [];

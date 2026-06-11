@@ -6,10 +6,11 @@ use function nx\{from, output, container, i18n};
  * 接口限流中间件
  * 
  * 使用方式:
- * - 默认限制: middleware(rate(), $handler) - 每分钟 60 次
- * - 自定义限制: middleware(rate(100, 60), $handler) - 每分钟 100 次
- * - 命名限流: middleware(rate(100, 60, 'api'), $handler)
- * 
+ * ```
+ * middleware(rate(), $handler);//默认限制，每分钟 60 次
+ * middleware(rate(100, 60), $handler);//自定义限制，每分钟 100 次
+ * middleware(rate(100, 60, 'api'), $handler);//命名限流
+ * ```
  * 存储方式:
  * - 默认使用 APCu: 需要 APCu 扩展
  * - 自定义存储: container('#rate:storage', fn($key, $window) => [$timestamp, ...])

@@ -8,13 +8,13 @@ use function nx\middleware\prefab\cors;
 // 测试用例
 test('cors: 设置默认跨域头',
 	function(){
-		middleware(cors(), fn() => 'ok');
+		middleware(cors(), 'ok');
 		return container('#out.response.headers.Access-Control-Allow-Origin');
 	},
 	'*');
 test('cors: 自定义 origin',
 	function(){
-		middleware(cors(['origin' => 'https://example.com']), fn() => 'ok');
+		middleware(cors(['origin' => 'https://example.com']), 'ok');
 		return container('#out.response.headers.Access-Control-Allow-Origin');
 	},
 	'https://example.com');

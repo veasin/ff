@@ -6,8 +6,10 @@ use function nx\{container, from, output, i18n};
 /**
  * CSRF 防护中间件
  * 使用方式:
- * - 生成 token: middleware(csrf(), $handler) - 自动在响应中添加 _token
- * - 验证 token: middleware(csrf(verify: true), $handler) - 验证请求中的 token
+ * ```
+ * middleware(csrf(), $handler);//生成 token，自动在响应中添加 _token
+ * middleware(csrf(verify: true), $handler);//验证请求中的 token
+ * ```
  * 行为:
  * - 不验证时: 自动生成 token 并注入响应
  * - 验证时: 检查请求中的 _token 或 X-CSRF-Token header

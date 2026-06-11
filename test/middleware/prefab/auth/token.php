@@ -12,7 +12,7 @@ test('token: 无 token 返回401',
 		container('#out.response', null);
 		container('#in.headers', null);
 		$_SERVER['REQUEST_METHOD'] = 'GET';
-		middleware(token(), fn($next) => 'ok');
+		middleware(token(), 'ok');
 		return container('#out.response.code');
 	},
 	401);
@@ -25,7 +25,7 @@ test('token: 认证成功返回结果',
 		container('#in.headers', null);
 		$_SERVER['REQUEST_METHOD'] = 'GET';
 		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer valid-token';
-		return middleware(token(), fn($next) => 'ok');
+		return middleware(token(), 'ok');
 	},
 	'ok');
 
@@ -37,7 +37,7 @@ test('token: 无效 token 返回403',
 		container('#in.headers', null);
 		$_SERVER['REQUEST_METHOD'] = 'GET';
 		$_SERVER['HTTP_AUTHORIZATION'] = 'Bearer invalid-token';
-		middleware(token(), fn($next) => 'ok');
+		middleware(token(), 'ok');
 		return container('#out.response.code');
 	},
 	403);
