@@ -369,41 +369,78 @@ route([
 route();
 ```
 
-#### cache - 多级缓存
+#### cache - 多级缓存链
+
+接收中间件工厂或值，按顺序链式执行。返回 null 的中间件自动穿透到下一层。
 
 ```php
-// APCu 缓存
-$result = cache('APCu', function() {
-    return db('SELECT * FROM users');
-});
+// 简单兜底
+cache(apcu('key', middleware: true), 'fallback value');
 
-// Redis 缓存
-$result = cache('Redis', function() {
-    return expensiveOperation();
-});
+// 工厂闭包
+cache(apcu('key', middleware: ['ttl' => 3600]), fn($next) => render());
 
-// 带 TTL
-$result = cache(['fn' => 'Redis', 'ttl' => 3600], function() {
-    return $data;
-});
+// 多级链：APCu → Redis → 数据库
+cache(apcu('key', middleware: 60), redis('key', middleware: 60), fn($next) => db('SELECT ...'));
 
-// 组合缓存（按顺序尝试）
-$result = cache('APCu', 'Redis', function() {
-    return $data;
-});
-
-// 配置方式（通过容器 cache）
-container('cache', [
-    'user_list' => ['APCu', 1800],  // APCu, TTL 30分钟
-    'api_data' => ['Redis', 3600, 'prefix_'],  // Redis, TTL 1小时, 自定义前缀
-]);
-$result = cache('user_list', function() {
-    return db('SELECT * FROM users', [], 'list');
-});
 ```
 
-> 配置方式：`container('cache', [...])`  
-> Redis 配置：`container('config.redis', ['host' => '127.0.0.1', 'port' => 6379, 'password' => '', 'database' => 0])`
+#### apcu - APCu 缓存驱动
+
+支持 CRUD 和中间件工厂两种模式，统一签名 `apcu($key, $value, $set, $middleware)`。
+
+**CRUD 模式：**
+
+```php
+apcu();                              // 触发初始化，返回 null
+apcu('key');                         // 单键读取
+apcu('key', 'value');                // 单键写入（无 TTL）
+apcu('key', null);                   // 单键删除
+apcu(null);                          // 清空全部
+apcu('key', 'value', 60);            // 写入+TTL（int 简写）
+apcu('key', 'value', 'cfg');         // 写入+配置名（string 简写）
+apcu(['k1', 'k2']);                  // 批量读取
+apcu(['k1' => 'v1']);                // 批量写入
+apcu('key', 'value', ['ttl' => 60, 'config' => 'cfg', 'prefix' => 'pfx_']);
+```
+
+**中间件工厂模式：**
+
+```php
+cache(apcu('key', middleware: true), fn($next) => render());
+cache(apcu('key', middleware: 60), fn($next) => render());
+cache(apcu('key', 'fallback', middleware: true), fn($next) => null);
+```
+
+> 配置方式：`container('#cache.apcu.{name}', ['ttl' => 3600, 'prefix' => 'pfx_'])`  
+> 默认 TTL 为 0（永不过期）
+
+#### redis - Redis 缓存驱动
+
+签名与 `apcu()` 完全一致，支持 CRUD 和中间件工厂两种模式。
+
+**CRUD 模式：**
+
+```php
+redis();                              // 触发初始化，返回 null
+redis('key');                         // 单键读取
+redis('key', 'value');                // 单键写入
+redis('key', null);                   // 单键删除
+redis('key', 'value', 60);            // 写入+TTL
+redis('key', 'value', ['ttl' => 60, 'config' => 'cfg']);
+redis(['k1', 'k2']);                  // 批量读取
+redis(['k1' => 'v1']);                // 批量写入
+```
+
+**中间件工厂模式：**
+
+```php
+cache(redis('key', middleware: true), fn($next) => expensiveOp());
+cache(redis('key', 'fallback', middleware: 60), fn($next) => null);
+```
+
+> Redis 连接配置：`container('config.redis', ['host' => '127.0.0.1', 'port' => 6379])`  
+> 命名配置：`container('#cache.redis.{name}', ['ttl' => 3600, 'prefix' => 'pfx_'])`
 
 #### db - 数据库操作
 

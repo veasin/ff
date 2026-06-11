@@ -1,69 +1,82 @@
 <?php
+declare(strict_types=1);
 namespace nx\cache;
 
 use function nx\container;
 
 /**
- * @param $next
- * @param $keyConfigName
- * @param $config
- * @param $extraConfig
- * @return mixed|null
- * @internal
+ * Redis 缓存驱动
+ * 使用方式（CRUD）:
+ * ```
+ * redis();                                            // 触发，返回 null
+ * redis('key');                                       // 单键读取
+ * redis(null);                                        // 清空全部
+ * redis(['k1', 'k2']);                                // 批量读取
+ * redis(['k1' => 'v1']);                              // 批量写入
+ * redis('key', 'val');                                // 单键写入（无 TTL）
+ * redis('key', null);                                 // 单键删除
+ * redis('key', 'val', 60);                            // 写入带 TTL（int 简写）
+ * redis('key', 'val', ['ttl' => 60, 'config' => 'cfg']);  // 写入带 TTL+配置名
+ * redis('key', 'val', 'cfg');                         // 写入+配置名
+ * ```
+ * 使用方式（工厂）:
+ * ```
+ * redis('key', middleware: true);                     // 中间件/默认 TTL
+ * redis('key', middleware: 60);                       // 中间件/TTL 简写
+ * redis('key', middleware: ['ttl' => 60]);            // 中间件/配置数组
+ * redis('key', middleware: 'cfg');                    // 中间件/配置名
+ * redis('key', 'fallback', middleware: true);         // 中间件/$value 兜底
+ * ```
+ * @param string|array|null $key 缓存键，null 清空，array 批量操作
+ * @param mixed $value 缓存值或 null 表示删除；工厂模式下作为 $next() 返回 null 时的兜底
+ * @param string|int|array $set int→['ttl'=>int], string→['config'=>string], array 原样；含 config 时从容器读取并合并
+ * @param bool|int|string|array $middleware false=CRUD 模式；非 false 时返回中间件闭包；int→TTL, string→config, array→配置
+ * @return mixed CRUD 模式返回查询结果/写入结果/null；工厂模式返回 callable
  */
-function redis($next, $keyConfigName, $config, $extraConfig): mixed{
-	static $hasRedis = class_exists('\Redis');
-	if(!$hasRedis) return $next !== null ? $next() : null;
-	static $redis = null;
-	static $defaultTtl = 3600;
-	static $prefix = '';
-	if(isset($config['Redis'])){
-		$redisConfig = $config['Redis'];
-		if(isset($redisConfig[0])) $defaultTtl = $redisConfig[0];
-		if(isset($redisConfig['_'])) $prefix = $redisConfig['_'];
-	}
-	$ttl = null;
-	$key = null;
-	if($extraConfig){
-		if(isset($extraConfig['ttl'])) $ttl = $extraConfig['ttl'];
-		if(isset($extraConfig['key'])) $key = $extraConfig['key'];
-	}
-	if($key === null && $keyConfigName) $key = $keyConfigName;
-	if($key === null) return $next !== null ? $next() : null;
-	if($redis === null){
-		$redisConfig = container('config.redis') ?: ['host' => '127.0.0.1', 'port' => 6379];
+function redis(string|array|null $key = null, mixed $value = null, string|int|array $set = [], bool|int|string|array $middleware = false): mixed{
+	if(!is_bool($middleware)) [$middleware, $set] = [true, $middleware];
+	if(is_int($set)) $set = ['ttl' => $set];
+	if(is_string($set)) $set = ['config' => $set];
+	if(isset($set['config'])) $set = [...(container("#cache.redis.{$set['config']}") ?? []), ...$set];
+	if($middleware) return function($next) use ($key, $set, $value){
+		if(!is_string($key)) return $next();
+		$prefix = $set['prefix'] ?? '';
+		$k = $prefix . $key;
+		$v = redis($k);
+		if(null !== $v) return $v;
+		$v = $next() ?? $value;
+		if(null !== $v) redis($k, $v, $set);
+		return $v;
+	};
+	static $exists = null;
+	$exists ??= class_exists('\Redis');
+	if(!$exists) return null;
+	static $conn = null;
+	static $failed = false;
+	if($conn === null && !$failed){
+		$config = container('config.redis') ?: ['host' => '127.0.0.1', 'port' => 6379];
 		try{
-			$redis = new \Redis();
-			$redis->connect($redisConfig['host'], $redisConfig['port'] ?? 6379);
-			if(isset($redisConfig['password'])){
-				$redis->auth($redisConfig['password']);
-			}
-			if(isset($redisConfig['database'])){
-				$redis->select($redisConfig['database']);
-			}
+			$c = new \Redis();
+			$c->connect($config['host'], $config['port'] ?? 6379);
+			if(isset($config['password'])) $c->auth($config['password']);
+			if(isset($config['database'])) $c->select($config['database']);
+			$conn = $c;
 		}catch(\Exception $e){
-			$hasRedis = false;
-			return $next !== null ? $next() : null;
+			$failed = true;
+			return null;
 		}
 	}
-	$cacheKey = $prefix . $key;
-	try{
-		$value = $redis->get($cacheKey);
-		if($value !== false){
-			return unserialize($value);
-		}
-	}catch(\Exception $e){
-		return $next !== null ? $next() : null;
-	}
-	if($next !== null){
-		$value = $next();
-		if($value !== null){
-			try{
-				$redis->setex($cacheKey, $ttl ?? $defaultTtl, serialize($value));
-			}catch(\Exception $e){
-			}
-		}
-		return $value;
-	}
-	return null;
+	if($conn === null) return null;
+	$prefix = $set['prefix'] ?? '';
+	return match (func_num_args()) {
+		0 => null,
+		1 => match (true) {
+			null === $key => $conn->flushAll(),
+			is_string($key) => ($v = $conn->get($prefix . $key)) !== false ? unserialize($v) : null,
+			array_is_list($key) => array_combine($key, array_map(fn($k) => ($v = $conn->get($prefix . $k)) !== false ? unserialize($v) : null, $key)),
+			default => (function() use ($conn, $key, $prefix) { foreach($key as $k => $v) $conn->set($prefix . $k, serialize($v)); return null; })(),
+		},
+		2 => null === $value ? $conn->del($prefix . $key) : $conn->set($prefix . $key, serialize($value)),
+		default => $conn->setex($prefix . $key, $set['ttl'] ?? 0, serialize($value)),
+	};
 }

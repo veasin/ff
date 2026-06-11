@@ -1,38 +1,68 @@
 <?php
+declare(strict_types=1);
 namespace nx\cache;
+
+use function nx\container;
+
 /**
- * @param $next
- * @param $keyConfigName
- * @param $config
- * @param $extraConfig
- * @return mixed|null
- * @internal
+ * APCu 缓存驱动
+ * 使用方式（CRUD）:
+ * ```
+ * apcu();                                            // 触发，返回 null
+ * apcu('key');                                       // 单键读取
+ * apcu(null);                                        // 清空全部
+ * apcu(['k1', 'k2']);                                // 批量读取
+ * apcu(['k1' => 'v1']);                              // 批量写入
+ * apcu('key', 'val');                                // 单键写入（无 TTL）
+ * apcu('key', null);                                 // 单键删除
+ * apcu('key', 'val', 60);                            // 写入带 TTL（int 简写）
+ * apcu('key', 'val', ['ttl' => 60, 'config' => 'cfg']);  // 写入带 TTL+配置名
+ * apcu('key', 'val', 'cfg');                         // 写入+配置名
+ * ```
+ * 使用方式（工厂）:
+ * ```
+ * apcu('key', middleware: true);                     // 中间件/默认 TTL
+ * apcu('key', middleware: 60);                       // 中间件/TTL 简写
+ * apcu('key', middleware: ['ttl' => 60]);            // 中间件/配置数组
+ * apcu('key', middleware: 'cfg');                    // 中间件/配置名
+ * apcu('key', 'fallback', middleware: true);         // 中间件/$value 兜底
+ * ```
+ * @param string|array|null     $key        缓存键，null 清空，array 批量操作
+ * @param mixed                 $value      缓存值或 null 表示删除；工厂模式下作为 $next() 返回 null 时的兜底
+ * @param string|int|array      $set        int→['ttl'=>int], string→['config'=>string], array 原样；含 config 时从容器读取并合并
+ * @param bool|int|string|array $middleware false=CRUD 模式；非 false 时返回中间件闭包；int→TTL, string→config, array→配置
+ * @return mixed CRUD 模式返回查询结果/写入结果/null；工厂模式返回 callable
  */
-function apcu($next, $keyConfigName, $config, $extraConfig): mixed{
-	static $hasApcu = function_exists('apcu_fetch') && function_exists('apcu_store');
-	if(!$hasApcu) return $next !== null ? $next() : null;
-	static $defaultTtl = 3600;
-	static $prefix = '';
-	if(isset($config['APCu'])){
-		$apcuConfig = $config['APCu'];
-		if(isset($apcuConfig[0])) $defaultTtl = $apcuConfig[0];
-		if(isset($apcuConfig['_'])) $prefix = $apcuConfig['_'];
-	}
-	$ttl = null;
-	$key = null;
-	if($extraConfig){
-		if(isset($extraConfig['ttl'])) $ttl = $extraConfig['ttl'];
-		if(isset($extraConfig['key'])) $key = $extraConfig['key'];
-	}
-	if($key === null && $keyConfigName) $key = $keyConfigName;
-	if($key === null) return $next !== null ? $next() : null;
-	$cacheKey = $prefix . $key;
-	$value = apcu_fetch($cacheKey, $success);
-	if($success) return $value;
-	if($next !== null){
-		$value = $next();
-		if($value !== null) apcu_store($cacheKey, $value, $ttl ?? $defaultTtl);
-		return $value;
-	}
-	return null;
+function apcu(string|array|null $key = null, mixed $value = null, string|int|array $set = [], bool|int|string|array $middleware = false): mixed{
+	if(!is_bool($middleware)) [$middleware, $set] = [true, $middleware];
+	if(is_int($set)) $set = ['ttl' => $set];
+	if(is_string($set)) $set = ['config' => $set];
+	if(isset($set['config'])) $set = [...(container("#cache.apcu.{$set['config']}") ?? []), ...$set];
+	if($middleware) return function($next) use ($key, $set, $value){
+		if(!is_string($key)) return $next();
+		$prefix = $set['prefix'] ?? '';
+		$k = $prefix . $key;
+		$v = apcu($k);
+		if(null !== $v) return $v;
+		$v = $next() ?? $value;
+		if(null !== $v) apcu($k, $v, $set);
+		return $v;
+	};
+	static $has = function_exists('\apcu_fetch');
+	if(!$has) return null;
+	$prefix = $set['prefix'] ?? '';
+	return match (func_num_args()) {
+		0 => null,
+		1 => match (true) {
+			null === $key => \apcu_clear_cache(),
+			is_string($key) => ($v = \apcu_fetch($prefix . $key)) !== false ? $v : null,
+			array_is_list($key) => array_combine($key, array_map(fn($k) => ($v = \apcu_fetch($prefix . $k)) !== false ? $v : null, $key)),
+			default => (function() use ($key, $prefix){
+				foreach($key as $k => $v) \apcu_store($prefix . $k, $v);
+				return null;
+			})(),
+		},
+		2 => null === $value ? \apcu_delete($prefix . $key) : \apcu_store($prefix . $key, $value),
+		default => \apcu_store($prefix . $key, $value, $set['ttl'] ?? 0),
+	};
 }
