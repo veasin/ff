@@ -56,6 +56,7 @@ function serve(string $root, array $map = []): callable{
 		$contentType = $types[$ext] ?? (mime_content_type($file) || 'application/octet-stream');
 		$content = file_get_contents($file);
 		output($content, [
+			'type' => 'http',
 			'headers' => [
 				'Content-Type' => $contentType,
 				'Content-Length' => strlen($content),
