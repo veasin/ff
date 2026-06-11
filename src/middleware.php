@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 namespace nx;
 /**
  * 执行中间件列表，严格遵循中间件模式（洋葱模型）。

@@ -1,12 +1,24 @@
 <?php
+declare(strict_types=1);
 namespace nx;
 /**
- * 数据库操作函数
- * @param object|string                       $sql        SQL语句
- * @param array|string|int|callable|bool|null $params     参数数组 或 mode（当省略params时）
- * @param string|int|callable|bool|null       $mode       操作模式 或 configName（当params为数组时）
- * @param string|null                         $configName 配置名称
- * @return mixed
+ * 数据库操作函数，支持多种查询模式和事务。
+ * ```
+ * $user = db('SELECT * FROM users WHERE id = ?', [1], 'row');   // 单行
+ * $users = db('SELECT * FROM users', [], 'list');                // 列表
+ * $count = db('SELECT COUNT(*) FROM users', [], 'value');        // 单值
+ * $id = db('INSERT INTO users (name) VALUES (?)', ['John'], 'id');// 插入返回ID
+ * $affected = db('UPDATE users SET name=? WHERE id=?', ['Jane', 1], 'count');// 影响行数
+ * $stmt = db('SELECT * FROM users', [], true);                  // 返回 PDOStatement
+ * db('BEGIN'); db('COMMIT'); db('ROLLBACK');                    // 事务
+ * ```
+ * 模式: row|list|value|column|pairs|group|id|count|ok|true|callable
+ * 连接通过 container('db.{configName}') 配置，默认配置名 default
+ * @param object|string                       $sql        SQL 语句或 SQL helper 对象
+ * @param array|string|int|callable|bool|null $params     参数数组；或 mode（省略 params 时跳到第 2 位）
+ * @param string|int|callable|bool|null       $mode       操作模式；或 configName（params 为数组时跳到第 3 位）
+ * @param string|null                         $configName 数据库配置名称，默认 'default'
+ * @return mixed 查询结果，失败返回 null
  */
 function db(object|string $sql, array|string|int|callable|bool|null $params = [], string|int|callable|bool|null $mode = null, ?string $configName = null): mixed{
 	static $connections = [];

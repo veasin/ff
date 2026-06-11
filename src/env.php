@@ -2,8 +2,16 @@
 declare(strict_types=1);
 namespace nx;
 /**
- * @param string $name
- * @return mixed
+ * 获取环境变量值，支持系统环境变量、$_ENV、.env 文件三种来源。
+ * 自动类型转换：'true'/'false'/'null'/'empty' 转为对应类型。
+ * .env 文件路径通过 container('#env') 配置，默认自动从 src/ 向上搜索。
+ * ```
+ * $debug = env('APP_DEBUG');     // 自动类型转换
+ * $host  = env('DB_HOST');       // 不存在返回 null
+ * $name  = env('APP_NAME');      // 字符串原样返回
+ * ```
+ * @param string $name 环境变量名
+ * @return mixed 变量值，不存在返回 null
  */
 function env(string $name): mixed{
 	$cast = fn($v) => match (strtolower($v)) {

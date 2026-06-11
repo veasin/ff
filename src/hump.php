@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 namespace nx;
 /**
  * 执行中间件列表，同时支持洋葱模型和链式调用，不支持阻断。

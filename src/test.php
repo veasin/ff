@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 namespace nx;
 /**
  * 轻量级测试函数，支持直接比较、闭包断言和异常断言。

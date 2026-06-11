@@ -2,12 +2,17 @@
 declare(strict_types=1);
 namespace nx;
 /**
- * * input('name', 'body','int','>0'):mixed
- * * input('name', 'body,int,>0'):mixed
- * * input(['name'=>$set], $globalSet):null|array
- * @param array|string|null $name
- * @param array|string|null $rules
- * @return mixed
+ * 获取并验证输入数据。input() = from() + filter()
+ * ```
+ * $age = input('age', 'query', 'int', '>=18', '<=100');       // 单值：来源+规则
+ * $age = input('age', 'query,int,>=18,<=100');                 // 单值：组合规则字符串
+ * $data = input(['id' => 'int,>0', 'name' => 'str']);         // 批量：map 数组+规则
+ * $list = input(['id', 'name'], 'body');                       // 批量：list 数组+来源
+ * ```
+ * 来源名: body|query|header|params|cookie|file，未指定来源时默认 body
+ * @param array|string|null $name  键名；null 时返回 null；数组时批量操作
+ * @param array|string|null ...$rules 验证规则，含来源名时自动识别；逗号分隔组合规则
+ * @return mixed 单值返回验证后的值；批量返回关联数组；失败返回 null
  */
 function input(array|string|null $name, array|string|null ...$rules): mixed{
 	if(is_array($name)){

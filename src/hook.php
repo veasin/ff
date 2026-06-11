@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 namespace nx;
 /**
  * 钩子系统，支持注册/触发分离，与容器集成。
@@ -50,8 +51,11 @@ function hook(bool|string|array|null $event = null, callable|array|null $param =
 	}
 	if(is_string($event)){
 		foreach(container("#hook.$event") ?? [] as $cb) $cb();
+		return null;
 	}
 	elseif(is_array($event)){
 		foreach($event as $name) hook($name);
+		return null;
 	}
+	return null;
 }

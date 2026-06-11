@@ -599,11 +599,11 @@ value/assign 执行中抛异常被捕获，异常对象参与比较（异常 vs 
 $key = name('user.id');  // 返回 'user.id'
 
 // 命名空间
-container('name', ['cache' => ['user' => 'cache:user:{uid}']]);
+container('#name', ['cache' => ['user' => 'cache:user:{uid}']]);
 $key = name('user', ['uid' => 123], 'cache');  // 返回 'cache:user:123'
 ```
 
-> 配置方式：`container('name', [...])`
+> 配置方式：`container('#name', [...])`
 
 #### log - 日志函数
 
@@ -629,15 +629,15 @@ log(['a' => 1, 'b' => 2]);
 // 支持 Stringable 对象
 log(new StringableClass());
 
-// 注入 PSR Logger
+// 注入 PSR Logger（实现 log() 方法的对象）
 container('#log', $psrLogger);
 
-// 注入闭包（fn 不会被容器自动执行）
-container('#log.fn', fn($level, $message, $context) => ...);
+// 注入闭包
+container('#log', fn($level, $message, $context) => ...);
 ```
 
 > PSR Logger 方式：`container('#log', $logger)`  
-> 闭包方式：`container('#log.fn', fn(...) => ...)`
+> 闭包方式：`container('#log', fn(...) => ...)`
 
 ---
 
@@ -859,4 +859,4 @@ middleware(serve('/var/www/public', ['html' => 'index.php']), $handler);
 ```php
 container('#static:mimes', ['webp' => 'image/webp']);
 ```
-```
+

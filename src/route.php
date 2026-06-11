@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 namespace nx;
 /**
  * 路由匹配，支持 CLI 和 Web 两种模式。
