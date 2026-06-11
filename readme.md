@@ -712,24 +712,38 @@ container('#rate:storage', fn($key, $value, $ttl) => 1);//写入
 
 ---
 
-#### serve(root, map) — 静态文件服务
+#### serve(root, cache) — 静态文件服务
 
-根据 URI 在指定目录查找静态文件，自动设置 MIME 类型。目录自动追加 `index.html`，启用一年缓存期。
+根据 URI 在指定目录查找静态文件，自动设置 MIME 类型。目录自动追加 `index.html`。
 
 ```php
-middleware(serve('/var/www/public'), $handler);//基础使用
-middleware(serve('/var/www/public', ['html' => 'index.php']), $handler);//扩展名映射
+middleware(serve('/var/www/public'), $handler);//基础使用（无缓存头）
+middleware(serve('/var/www/public', false), $handler);//强制不缓存
+middleware(serve('/var/www/public', 31536000), $handler);//自定义 max-age
+middleware(serve('/var/www/public', 'etag'), $handler);//ETag 条件缓存
+middleware(serve('/var/www/public', 'modified'), $handler);//Last-Modified 条件缓存
+middleware(serve('/var/www/public', ['control' => 'etag,modified', 'age' => 86400]), $handler);//组合策略
 ```
 
 参数：
 - **`$root`**: `string` 必填 静态文件根目录
-- **`$map`**: `array` 默认 `[]` 扩展名到目标文件的映射
+- **`$cache`**: `null|false|int|string|array` 默认 `null` 缓存策略
+  - `null`（默认）— 不输出 `Cache-Control`，浏览器自行决定
+  - `false` — `Cache-Control: no-cache, no-store, must-revalidate`
+  - `3600` / `86400` — `Cache-Control: public, max-age=N`
+  - `'etag'` — ETag 条件缓存（`filemtime+filesize` 快速计算），命中返回 304
+  - `'modified'` — Last-Modified 条件缓存，命中返回 304
+  - `['control' => 'etag,modified', 'age' => 3600]` — 组合策略，`control` 逗号分隔，`age` 为 max-age 秒数
+
+优先级：显式传参 > `container('#static:cache')` > 默认无缓存
 
 内置 MIME 类型支持：`html`、`htm`、`txt`、`css`、`js`、`json`、`png`、`jpg`、`jpeg`、`gif`、`svg`、`ico`、`woff`、`woff2`、`ttf`、`zip`、`xml`
 
 容器配置：
 - **`#static:mimes`**: `array` - 扩展 MIME 类型
+- **`#static:cache`**: `null|false|int|string|array` - 全局默认缓存策略，参数未传时回退到此配置
 
 ```php
 container('#static:mimes', ['webp' => 'image/webp']);//扩展 MIME 类型
+container('#static:cache', 86400);//全局默认缓存 1 天
 ```
