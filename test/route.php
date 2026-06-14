@@ -147,4 +147,30 @@ test('路由 - 空路径会错误匹配所有路由', function(){
 		'get:/' => fn($next) => 'root',
 	]);
 }, 'root');  // 期望只匹配 'get:/'
+test('路由 - 多次调用$next被阻止', function(){
+	container(null);
+	container("#in.input", ['method' => 'get', 'uri' => '/test', 'params' => []]);
+	$multiNext = function($next){
+		$first = $next();
+		$second = $next();
+		return "first=$first,second=$second";
+	};
+	return route('get:/test', $multiNext, fn($next) => 'world');
+}, 'first=world,second=world');
+test('路由 - *通配符阻断后续路由', function(){
+	container(null);
+	container("#in.input", ['method' => 'get', 'uri' => '/some/action', 'params' => []]);
+	return route([
+		'get:/some/*' => fn($next) => 'wildcard',
+		'get:/some/action' => fn($next) => 'action',
+	]);
+}, 'wildcard');
+test('路由 - *通配符放行后续路由', function(){
+	container(null);
+	container("#in.input", ['method' => 'get', 'uri' => '/some/action', 'params' => []]);
+	return route([
+		'get:/some/*' => fn($next) => $next(),
+		'get:/some/action' => fn($next) => 'action',
+	]);
+}, 'action');
 test();

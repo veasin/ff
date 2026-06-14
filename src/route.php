@@ -23,6 +23,13 @@ namespace nx;
  * route('GET:/api/items', fn($next) => output(loadItems()));
  * route(['GET:/list' => fn($next) => ..., 'POST:/create' => fn($next) => ...]);
  * ```
+ * 多条路由匹配时，内部使用 middleware() 执行 handler，* 通配符支持阻断：
+ * ```
+ * route(['GET:/some/*' => fn($next) => 'wildcard',   // /some/action 匹配时，不调 $next 阻断后续
+ *        'GET:/some/action' => fn($next) => 'action']);// 不会执行
+ * route(['GET:/some/*' => fn($next) => $next(),       // 调 $next 放行
+ *        'GET:/some/action' => fn($next) => 'action']);// 继续执行
+ * ```
  * @param null|bool|string|array $match  匹配规则或路由映射数组
  *                                        true=开启延时模式
  *                                        null=清空已收集路由
@@ -94,5 +101,5 @@ function route(null|bool|string|array $match = null, callable ...$fns): mixed{
 		}
 	}
 	container('#in.params', $params);
-	return $handlers ? hump(...$handlers) : null;
+	return $handlers ? middleware(...$handlers) : null;
 }

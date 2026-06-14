@@ -198,7 +198,7 @@ container('#out.callback', function($response) {
 
 #### route - 路由匹配
 
-支持 RESTful 路由、参数占位符、通配符和 CLI 路由。
+支持 RESTful 路由、参数占位符、通配符和 CLI 路由。内部使用 `middleware()` 执行匹配到的路由处理函数，支持阻断：不调 `$next` 则终止后续路由。
 
 ```php
 route('GET:/users', function($next) { output(['users' => []]); });//基础路由
@@ -218,6 +218,16 @@ route(true);//开启
 route('GET:/api/items', fn($next) => output(loadItems()));
 route('POST:/api/items', fn($next) => { /* ... */ });
 route();//统一触发
+```
+
+**$next 规则：** 匹配到多条路由时按顺序执行，调 `$next(...)` 才继续下一条；不调 `$next` 则阻断并返回当前路由的返回值；多次调 `$next` 只有第一次生效。
+
+多条路由匹配 `*` 通配符阻断示例：
+```php
+route(['GET:/some/*' => fn($next) => 'wildcard',   // /some/action 匹配时，不调 $next 阻断后续
+       'GET:/some/action' => fn($next) => 'action']);// 不会执行
+route(['GET:/some/*' => fn($next) => $next(),       // 调 $next 放行
+       'GET:/some/action' => fn($next) => 'action']);// 继续执行
 ```
 
 ---
