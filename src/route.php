@@ -68,6 +68,7 @@ function route(null|bool|string|array $match = null, callable ...$fns): mixed{
 		}
 		if($method !== '*' && $method !== '' && $method !== $currentMethod) continue;
 		$routeSegments = array_values(array_filter(explode('/', trim($uri))));
+		if($uri === '') $routeSegments = $reqSegments;
 		$isWildcard = end($routeSegments) === '*';
 		$reqIndex = 0;
 		$param = [];

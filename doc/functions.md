@@ -1,0 +1,461 @@
+### 函数参考
+
+---
+
+**基础设施**
+
+#### container - 容器方法
+
+支持双生命周期（持久/请求级）与延迟构建的配置容器，适用于 Swoole/FrankenPHP 等常驻内存场景。在 php-fpm 或 apache 下，每次请求都是重置的，可以忽略相关逻辑。
+
+```php
+container(null);//清空请求级配置
+container(null, true);//清空持久级配置
+container('^database.host');//仅读取持久级（^ 前缀）
+container('database.host', 'localhost');//写入请求级
+container('^database.host', 'localhost');//写入持久级
+container('database.host', null);//删除键
+container(['database.host', 'app.debug']);//批量读取
+container(['k' => 'v']);//批量设置（请求级）
+container(['k' => 'v'], '^');//批量持久设置
+container(['^persist.k' => 'v', 'request.k' => 'v']);//混合级别批量设置
+container('version', fn() => file_get_contents('version.txt'));//闭包工厂
+container('version*');//执行闭包返回结果
+container('plain*');//非闭包值忽略 *，返回 'string'
+```
+
+---
+
+#### env - 环境变量读取
+
+支持系统环境变量、`$_ENV`、`.env` 文件三种来源，自动类型转换（`'true'` → `true`、`'false'` → `false`、`'null'` → `null`、`'empty'` → `''`）。
+
+```php
+$host = env('DB_HOST');//不存在返回 null
+env('APP_KEY');//读取 .env 文件
+```
+
+容器配置：
+- **`#env`**: `string` - `.env` 文件路径，默认从 `src/` 向上搜索（最多 3 层）
+
+---
+
+#### name - 命名配置管理
+
+```php
+$key = name('user.id');//返回 'user.id'
+$key = name('user', ['uid' => 123], 'cache');//命名空间替换，返回 'cache:user:123'
+```
+
+容器配置：
+- **`#name`**: `array` - 命名空间模板配置
+
+```php
+container('#name', ['cache' => ['user' => 'cache:user:{uid}']]);
+```
+
+---
+
+#### args - 命令行参数解析
+
+解析命令行参数，支持短选项、长选项和引号值。
+
+```php
+$args = args('-v --file=test.php input.txt');
+//['v' => true, 'file' => 'test.php', 'input.txt']
+$args = args(['-abc', '--name=John', 'data.txt']);
+//['a' => true, 'b' => true, 'c' => true, 'name' => 'John', 'data.txt']
+$args = args('--message="Hello World"');
+//['message' => 'Hello World']
+```
+
+---
+
+#### safe - 安全调用
+
+封装 try/catch 模式，失败返回 `null`，省去重复的异常处理模板代码。
+
+```php
+$users = safe(fn() => db('SELECT * FROM users'));//无参调用
+$user = safe(fn($id) => db('SELECT * FROM users WHERE id=?', [$id]), 1);//带参数调用
+$result = safe(fn($a, $b) => $a / $b, 10, 0);//多参数，返回 null
+$data = safe(fn() => json_decode($raw, true, 512, JSON_THROW_ON_ERROR));//异常时静默降级
+```
+
+---
+
+**输入层**
+
+#### input - 输入数据获取
+
+获取输入并验证，组合 `from()` + `filter()`。未指定来源时默认 `body`。
+
+```php
+$age = input('age', 'query', 'int', '>=18', '<=100');//单值：来源+规则
+$age = input('age', 'body,int,>=18,<=100');//单值：组合规则字符串
+$data = input(['id' => 'int,>0', 'name' => 'str']);//批量：map 数组+规则
+$list = input(['id', 'name'], 'body');//批量：list 数组+来源
+```
+
+---
+
+#### from - 从指定来源获取原始值
+
+支持来源：`query` | `cookie` | `file` | `params` | `header` | `input` | `body`。
+
+```php
+$id = from('id', 'body');//从 Body 获取
+$name = from('name', 'query');//从 Query 获取
+$token = from('authorization', 'header');//从 Header 获取
+$data = from('id', ['id' => 123, 'name' => 'test']);//直接使用数组作为来源
+$body = from(null, 'body');//获取整个来源
+$result = from(['id', 'name'], 'query');//批量获取
+```
+
+容器配置：
+- **`#in.input`**: `array` - 预置输入数据（`method`、`uri`、`params`）
+- **`#in.params`**: `array` - 预置路由参数
+- **`#in.body`**: `array` - 预置请求体
+- **`#in.headers`**: `array` - 预置请求头
+- **`#in.raw`**: `string` - 预置原始输入
+- **`#in.content`**: `array` - 扩展 content-type 解析器
+
+---
+
+#### filter - 数据验证与转换
+
+类型转换与验证规则链，规则可逗号分隔组合。
+
+```php
+filter('123', 'int');//返回 123 (int)
+filter('true', 'bool');//返回 true
+filter('{"a":1}', 'json');//返回 ['a' => 1]
+filter('hello@example.com', 'email');//邮箱验证
+filter('150', 'int,>100,<200');//逗号分隔组合规则
+filter(10, 'int', '>5');//返回 10
+filter(3, 'int', '>5');//返回 null（验证失败）
+filter('abc', fn($v) => strlen($v) > 2);//自定义验证，返回 'abc'
+```
+
+容器配置：
+- **`#filter`**: `array` - 扩展规则，格式 `[name => [type, default, [callable]]]`
+
+```php
+container('#filter.phone', [null, null, [fn($v) => preg_match('/^1\d{10}$/', $v)]]);
+filter('13800138000', 'phone');//返回 '13800138000'
+```
+
+---
+
+**输出层**
+
+#### output - 输出数据
+
+支持多种格式和模板，核心签名 `output($data, $set)`。
+
+```php
+output(['status' => 'ok']);//默认 JSON 输出
+output(null, 201);//只设置状态码（int 简写）
+output(Status::NotFound);//使用 Status enum
+output($data, ['type' => 'json']);//指定格式
+output($data, ['type' => 'view', 'file' => 'template.php']);//视图模板
+output($data, ['type' => 'file', 'file' => '/path/to/photo.jpg']);//文件输出
+output($data, 'template.php');//视图模板 string 简写
+output(true, ['type' => 'file', 'file' => '/path/to/file.pdf']);//文件下载（Content-Disposition）
+output();//无参触发发送
+```
+
+**$set**：
+- **`code`**: `int` 默认 `200` HTTP 状态码
+- **`type`**: `string` 默认 `'json'` 输出格式，内置 `json`/`view`/`file`
+- **`file`**: `string` - 文件路径，`type=view` 时作模板，`type=file` 时作下载文件
+- **`headers`**: `array` 默认 `[]` HTTP 响应头键值对
+- **`message`**: `string` 默认 `''` HTTP 状态消息
+- **`pretty`**: `bool` 默认 `false` JSON 是否美化输出
+
+容器配置：
+- **`#out.type.{name}`**: `callable` - 扩展输出格式，签名 `fn(array $response): array`
+- **`#out.callback`**: `callable` - 自定义渲染回调，签名 `fn($response) => ...`
+
+```php
+//扩展输出格式
+container('#out.type.xml', function(array $response): array {
+    $response['headers']['Content-Type'] = 'application/xml';
+    $response['body'] = xml_encode($response['body']);
+    return $response;
+});
+output($data, ['type' => 'xml']);
+
+//自定义渲染回调
+container('#out.callback', function($response) {
+    echo json_encode($response['body']);
+});
+```
+
+---
+
+**流程控制**
+
+#### route - 路由匹配
+
+支持 RESTful 路由、参数占位符、通配符和 CLI 路由。
+
+```php
+route('GET:/users', function($next) { output(['users' => []]); });//基础路由
+route('GET:/user/:id', function() { ... });//带参数（:param 或 {param}）
+route('POST:/api/user', function() { ... });//POST 路由
+route(['get:/api/list' => fn() => 'list', 'post:/api/create' => fn() => 'create']);//路由映射数组
+route('GET:/api/*', function() { ... });//通配符路由
+route('cli:verbose', function() { ... });//CLI 路由
+route(true);//开启延时模式
+route();//触发执行收集的路由
+route(null);//清空已收集的路由
+```
+
+延时执行模式：
+```php
+route(true);//开启
+route('GET:/api/items', fn($next) => output(loadItems()));
+route('POST:/api/items', fn($next) => { /* ... */ });
+route();//统一触发
+```
+
+---
+
+#### middleware - 中间件执行引擎
+
+洋葱模型中间件执行器，支持阻断（不调 `$next` 则终止）。参数可以是闭包、文件路径或其他值。
+
+```php
+middleware(cors(), auth(), $handler);//执行中间件列表
+middleware(fn($next) => $next('value'));//闭包需接收 $next 并调用
+middleware('/path/to/file.php', $handler);//文件路径，通过 $next 变量调用下一层
+middleware('fallback');//非可调用值作为初始值透传
+```
+
+**$next 规则：**
+- 中间件按顺序执行，调 `$next(...)` 才继续下一层
+- 不调 `$next` 则终止，返回当前中间件的返回值
+- 多次调 `$next` 只有第一次生效，后续直接返回第一次的结果
+
+---
+
+#### hump - 链式中间件执行器
+
+洋葱模型变体，支持链式调用但不支持阻断。不调 `$next` 也会自动继续执行，并将当前返回值传给下一个。
+
+```php
+hump(cors(), auth(), $handler);//执行中间件列表
+hump(fn($next) => $next('value'));//不调 $next 自动继续，返回值传给下一层
+hump('/path/to/file.php', $handler);//文件路径
+```
+
+---
+
+#### hook - 钩子系统
+
+注册/触发分离的钩子系统，与容器集成。生命周期模式下 `output()` 等函数自动挂载。
+
+```php
+hook(true);//开启钩子模式（持久级，默认序列 ['after', 'end']）
+hook(true, ['after', 'end']);//自定义默认序列
+hook('after', fn() => output(['status' => 'ok']));//注册回调（请求级）
+hook();//触发默认序列（after → end）
+hook('after');//触发单个钩子
+hook(['after', 'end']);//自定义触发顺序
+hook('custom', function() { echo 'hello'; });//独立注册
+hook('custom');//独立触发
+hook('after', null);//清空指定钩子
+hook(null);//清空所有钩子
+```
+
+容器配置：
+- **`#hook.{name}`**: `array` - 钩子回调列表，请求结束时 `container(null)` 自动清空
+- **`^#hook`**: `array` - 默认序列，持久级存储，跨请求保持
+
+---
+
+**缓存**
+
+#### cache - 多级缓存链
+
+接收中间件工厂或值，按顺序链式执行。返回 `null` 的中间件自动穿透到下一层。
+
+```php
+cache(apcu('key', middleware: true), 'fallback value');//简单兜底
+cache(apcu('key', middleware: ['ttl' => 3600]), fn($next) => render());//工厂闭包
+cache(apcu('key', middleware: 60), redis('key', middleware: 60), fn($next) => db('SELECT ...'));//多级链
+```
+
+---
+
+#### apcu - APCu 缓存驱动
+
+支持 CRUD 和中间件工厂两种模式，统一签名 `apcu($key, $value, $set, $middleware)`。默认 TTL 为 0（永不过期）。
+
+```php
+apcu('key');//单键读取
+apcu('key', 'value');//单键写入
+apcu('key', null);//单键删除
+apcu(null);//清空全部
+apcu('key', 'value', 60);//写入 + TTL（int 简写）
+apcu('key', 'value', ['ttl' => 60, 'config' => 'cfg']);//写入 + TTL + 配置名
+apcu('key', 'value', 'cfg');//写入 + 配置名（string 简写）
+apcu(['k1', 'k2']);//批量读取
+apcu(['k1' => 'v1']);//批量写入
+```
+
+中间件工厂模式：
+```php
+cache(apcu('key', middleware: true), fn($next) => render());
+cache(apcu('key', middleware: 60), fn($next) => render());
+cache(apcu('key', 'fallback', middleware: true), fn($next) => null);
+```
+
+容器配置：
+- **`#cache.apcu.{name}`**: `array` - 命名配置，支持 `ttl`、`prefix`、`config`
+
+---
+
+#### redis - Redis 缓存驱动
+
+签名与 `apcu()` 完全一致，支持 CRUD 和中间件工厂两种模式。
+
+```php
+redis('key');//单键读取
+redis('key', 'value');//单键写入
+redis('key', null);//单键删除
+redis('key', 'value', 60);//写入 + TTL
+redis('key', 'value', ['ttl' => 60, 'config' => 'cfg']);//写入 + TTL + 配置名
+redis('key', 'value', 'cfg');//写入 + 配置名（string 简写）
+redis(['k1', 'k2']);//批量读取
+redis(['k1' => 'v1']);//批量写入
+```
+
+中间件工厂模式：
+```php
+cache(redis('key', middleware: true), fn($next) => expensiveOp());
+cache(redis('key', 'fallback', middleware: 60), fn($next) => null);
+```
+
+容器配置：
+- **`config.redis`**: `array` - Redis 连接配置，支持 `host`、`port`、`password`、`database`
+- **`#cache.redis.{name}`**: `array` - 命名配置，支持 `ttl`、`prefix`
+
+---
+
+**数据库**
+
+#### db - 数据库操作
+
+基于 PDO 的数据库操作，支持多种返回模式、事务和命名配置。
+
+```php
+$user = db('SELECT * FROM users WHERE id = ?', [1], 'row');//查询单行
+$users = db('SELECT * FROM users', 'list');//查询列表（无参数时省略绑定位）
+$count = db('SELECT COUNT(*) FROM users', 'value');//查询单个值
+$names = db('SELECT name FROM users', 'column');//查询单列
+$pairs = db('SELECT id, name FROM users', 'pairs');//查询键值对
+$grouped = db('SELECT status, COUNT(*) FROM users GROUP BY status', 'group');//分组结果
+$id = db('INSERT INTO users (name) VALUES (?)', ['John'], 'id');//插入获取 ID
+$count = db('UPDATE users SET name = ? WHERE id = ?', ['Jane', 1], 'count');//更新影响行数
+$stmt = db('SELECT * FROM users', true);//返回 PDOStatement
+$ok = db('INSERT INTO users (name) VALUES (?), (?)', [['John'], ['Jane']], 'ok');//批量插入
+$result = db('SELECT * FROM users', fn($stmt, $pdo) => $stmt->fetchAll());//自定义处理
+```
+
+事务支持：
+```php
+db('BEGIN');//开启事务
+db('COMMIT');//提交事务
+db('ROLLBACK');//回滚事务
+db('SAVEPOINT sp1');//保存点
+db('ROLLBACK TO SAVEPOINT sp1');//回滚到保存点
+```
+
+容器配置：
+- **`db.{name}`**: `array` - 数据库连接配置，支持 `dsn`、`username`、`password`、`options`
+
+```php
+container('db.default', ['dsn' => 'mysql:host=localhost;dbname=test', 'username' => 'root', 'password' => '']);
+$user = db('SELECT * FROM users WHERE id = ?', [1], 'row', 'default');//使用命名配置
+```
+
+配合 [nx-sql](https://github.com/veasin/nx-sql) 使用：
+```php
+$id = db(sql::table('users')->insert(['name' => 'John']), 'id');//插入
+$user = db(sql::table('users')->where(['id' => 1])->select(), 'row');//查询
+$affected = db(sql::table('users')->where(['id' => 1])->update(['name' => 'Jane']), 'count');//更新
+$affected = db(sql::table('users')->where(['id' => 1])->delete(), 'count');//删除
+```
+
+---
+
+**国际化**
+
+#### i18n - 多语言翻译
+
+支持占位符替换和强制语言，框架翻译键格式 `#模块:key`。
+
+```php
+i18n(lang: 'en_US');//设置当前语言
+$msg = i18n('#error:internal');//框架翻译
+$msg = i18n('#error:internal', 'en_US');//强制语言
+$msg = i18n('welcome', ['name' => '张三']);//{name} 占位符替换
+$msg = i18n('dot.key');//. 自动转 _
+```
+
+容器配置：
+- **`i18n.{lang}.{key}`**: `string` - 用户翻译，可增量覆盖框架默认
+- **`^i18n.lang`**: `string` - 持久化当前语言
+
+```php
+container('i18n.zh_CN.#error:internal', '自定义');
+container('^i18n.lang', 'en_US');
+```
+
+---
+
+**开发调试**
+
+#### log - 日志函数
+
+```php
+log('用户登录');//基础用法，默认 level 为 info
+log('发生错误', 'error');//指定 level
+log('用户 {name} 登录', ['name' => 'admin']);//{key} 占位符替换
+log('错误: {msg}', ['msg' => '连接失败'], 'error');//同时使用 context 和 level
+log(['a' => 1, 'b' => 2]);//非 string 消息自动 json
+log(new StringableClass());//支持 Stringable 对象
+```
+
+容器配置：
+- **`#log`**: `object|callable` - PSR Logger 对象或闭包，签名 `fn($level, $message, $context)`
+
+```php
+container('#log', $psrLogger);//注入 PSR Logger
+container('#log', fn($level, $message, $context) => ...);//注入闭包
+```
+
+---
+
+#### test - 轻量级测试
+
+支持直接比较、闭包断言和异常类型断言。value/assign 执行中抛异常被捕获，异常对象参与比较（异常 vs 具体值必然失败），输出时显示异常 message。
+
+```php
+test('数字比较', 5, 5);//直接比较
+test('加法', fn() => 2+2, 4);//value 是闭包
+test('范围判断', 10, fn($v) => $v > 5);//assign 是断言函数
+test('除零类型', fn() => 1/0, DivisionByZeroError::class);//异常类型断言
+test('除零', fn() => 1/0, fn($v) => $v instanceof DivisionByZeroError);//闭包处理异常
+test();//执行所有测试并输出
+test(null);//清空所有测试用例
+```
+
+**ANSI 颜色标记：**
+- 小写=标准色：`k`黑 `r`红 `g`绿 `y`黄 `b`蓝 `m`品 `c`青 `w`白 `n`灰
+- 大写=亮色：`K`亮黑 `R`亮红 `G`亮绿 `Y`亮黄 `B`亮蓝 `M`亮品 `C`亮青 `W`亮白
+- `[r:w]` 前景红底白，`[ :]` 重置前景，`[: ]` 重置背景，`[ : ]` 重置全部，`[:]` 重置全部简写
+
+---

@@ -11,7 +11,7 @@ namespace nx;
  * filter(3, 'int', '>5');                        // 参数化验证: 返回 null (3不大于5)
  * filter('abc', fn($v) => strlen($v) > 2);       // 自定义闭包: 返回 'abc'
  * filter('150', 'int,>0,<200');                  // 组合规则: 返回 150
- * container('#filter', ['phone' => [null, null, [fn($v) => preg_match('/^1\d{10}$/', $v)]]]);
+ * container('#filter.phone', [null, null, [fn($v) => preg_match('/^1\d{10}$/', $v)]]);
  * filter('13800138000', 'phone');                 // 自定义规则: 返回 '13800138000'
  * ```
  * @param mixed $var 待验证的数据
