@@ -126,65 +126,73 @@ container('#env', __DIR__ . '/.env');
 
 ### route()
 
-- 需要多分支统一入口时使用，根据 method+path 分发到对应 handler
-- 扩展在 `input()` 之上：请求进入时先匹配路由，定位 handler 后再走标准的 input→业务→output
-- **核心规则：未显式指定的部分从父级继承；顶级路由的隐式父级是 `['*', '/']`**
-  - 无冒号 → path，method 继承父级（如 `/bare-path` 匹配任意 method）
-  - 有冒号 → `method:path`，空侧从父继承
-  - `''` 或 `':'` → 两侧继承（前缀匹配）
-- **返回值：** 匹配成功的路由键数组（`string[]`），未匹配返回 `null`
-- **middleware 结果：** 转存 `container('#route.result')`，不随 route() 返回值暴露
+需要多分支统一入口时使用，根据 method+path 分发到对应 handler。扩展在 `input()` 之上。
+
+**推荐一次性数组形式**，所有路由定义集中在一个数组里，结构一致、易于嵌套。子映射数组中可以混合 int-key callable（中间件）和 string-key 子路由，解析规则：
+
+1. **int-key callable** → 累积到当前层的中间件栈
+2. **string-key 子路由** → 截取当前累积栈的快照位置
+3. **清单数组 `[fn, fn]`** → 展平后逐个入栈
+4. **`['sub' => fn]` assoc 数组** → 视为子映射合并到子路由列表
+
+每个子路由展开时，从累积栈按**位置切片**确定自己的 `before`（切到 pos）和 `after`（pos 切到尾）：
+
+```
+                    pos          末尾
+[b1, k1:fn1, b2, k2:fn2, a]
+├── before(k1) ──┤               k1 → before=stack[:1]=[b1]
+├──────── before(k2) ────────┤   k2 → before=stack[:2]=[b1,b2]
+                  ├── after(k1) ──┤  → after=stack[1:]=[b2,a]
+                                ├─ after(k2) ─┤  → after=stack[2:]=[a]
+```
 
 ```php
-$keys = route([
-    'GET:/api/items'      => fn() => output(loadItems()),
-    'POST:/api/items'     => fn() => output(createItem(input('text', 'body,str')), 201),
-    'PUT:/api/items/{id}'  => function () {
-        output(updateItem(input('id', 'params', 'int')));
-    },
-]);
-// $keys = ['PUT:/api/items/{id}']  // 匹配到的路由键数组
-
-// 无 handler：声明路由但不处理，匹配成功仍返回 key 数组（不视为 404）
-$keys = route('GET:/api/health');
-// $keys = ['GET:/api/health']，middleware 结果为空
-
-// 需要 middleware 返回值时从容器读取
-route('GET:/api/items', fn($next) => loadItems());
-$result = container('#route.result');
-
-// 组前缀：子映射中的子键自动拼接父路径
-route(['get:/api/{ver}/'=>[
-    'list'       => fn() => ...,
-    'post:create'=> fn() => ...,
-    ''           => fn() => ...,   // 前缀匹配
+// ✅ 推荐：一次性数组 — API 端点组
+route(['api/'=>[
+    fn($next) => auth($next),                // before：所有端点先过鉴权
+    'post:login'   => fn($next) => output(login(input('name,pass', 'body'))),  // login 跳过 rate_limit
+    fn($next) => rate_limit($next),           // login 之后的端点需要限流
+    'post:data'    => fn($next) => output(create(input('content', 'body'))),
+    'get:list'     => fn($next) => output(fetch(input('page', 'query'))),
+    fn($next) => log($next),                 // after：所有端点记日志
 ]]);
-
-// 智能子路由：公共前置/后置包裹每个子 handler
-route('get:/api/{ver}/',
-    fn($next) => auth($next),              // 公共前置校验
-    ['list' => fn($next) => output(list()),
-     'create' => fn($next) => output(create())],
-    fn($next) => log($next),               // 公共后置日志
-);
-
-// 嵌套子路由：多层子映射自动递归展开
-route(['get:/a/'=>['b/'=>['c/'=>['d'=>fn($next)=>...]]]]);
-// → get:/a/b/c/d
-
-// 嵌套 + 智能包裹：外层前置/后置向内透传
-route('get:/level1/',
-    fn($next) => auth($next),
-    ['level2/' => ['deep' => fn($next) => output(...)]],
-    fn($next) => log($next),
-);
-// → get:/level1/level2/deep 执行为 [auth, handler, log]
-
-// 延时执行：先收集再统一触发
-route(true);
-route('GET:/api/items', fn($next) => output(loadItems()));
-route();  // 返回匹配的 key 数组
 ```
+
+每个子路由展开后的实际执行链：
+
+| 子路由 | before | after | 实际链 |
+|--------|--------|-------|--------|
+| `post:login` | `[auth]` | `[rate_limit, log]` | `auth → login → rate_limit → log` |
+| `post:data` | `[auth, rate_limit]` | `[log]` | `auth → rate_limit → data → log` |
+| `get:list` | `[auth, rate_limit]` | `[log]` | `auth → rate_limit → list → log` |
+
+#### 多层混写
+
+嵌套时每层独立累积自己的栈，外层 before/after 通过 pending 队列向内透传：
+
+```php
+route(['admin/'=>[
+    fn($next) => auth($next),                // 外层 before：后台所有路由需鉴权
+    'post:login' => fn($next) => output(login(...)),   // login 只过 auth
+    'manage/' => [                            // 内层组
+        fn($next) => role_check($next, 'admin'),       // 内层 before：manage 下需 admin 角色
+        'get:users'  => fn($next) => output(list_users(...)),
+        'post:config' => fn($next) => output(set_config(...)),
+        fn($next) => op_log($next),                    // 内层 after：manage 操作记操作日志
+    ],
+    fn($next) => access_log($next),          // 外层 after：所有后台请求记访问日志
+]]);
+```
+
+内层展开后：
+
+| 路由 | 实际链 |
+|------|--------|
+| `post:login` | `auth → login → access_log` |
+| `get:users` | `auth → role_check → users → op_log → access_log` |
+| `post:config` | `auth → role_check → config → op_log → access_log` |
+
+底层使用 `middleware()` 执行最终链，从左到右顺序调用。每个函数接收 `$next`，调之则继续，不调则阻断。
 
 ---
 

@@ -363,4 +363,74 @@ test('路由 - 嵌套子路由：前缀匹配空键', function(){
 	container("#in.input", ['method' => 'get', 'uri' => '/a/b', 'params' => []]);
 	return route(['get:/a/'=>['b/'=>[''=>fn($next)=>'prefix']]]);
 }, ['get:/a/b']);
+test('路由 - 分组中间件：无子路由时保留原始列表', function(){
+	container(null);
+	container("#in.input", ['method' => 'get', 'uri' => '/mixed', 'params' => []]);
+	return route(['get:/mixed' => [
+		fn($next) => 'A',
+		[fn($next) => 'B1', fn($next) => 'B2'],
+		fn($next) => 'C',
+	]]);
+}, ['get:/mixed']);
+test('路由 - 分组中间件 + 子路由：分组内函数进入累积栈', function(){
+	container(null);
+	container("#in.input", ['method' => 'get', 'uri' => '/group/run', 'params' => []]);
+	$track = [];
+	$r = route(['get:/group/' => [
+		function($next) use (&$track){ $track[] = 'A'; return $next(); },
+		[
+			function($next) use (&$track){ $track[] = 'B'; return $next(); },
+			function($next) use (&$track){ $track[] = 'C'; return $next(); },
+		],
+		function($next) use (&$track){ $track[] = 'D'; return $next(); },
+		'run' => function($next) use (&$track){ $track[] = 'E'; return 'val'; },
+		function($next) use (&$track){ $track[] = 'F'; return $next(); },
+	]]);
+	return [$track, $r];
+}, [['A', 'B', 'C', 'D', 'E'], ['get:/group/run']]);
+test('路由 - 分组中间件 + 子路由：交错模式', function(){
+	container(null);
+	container("#in.input", ['method' => 'get', 'uri' => '/mix/k1', 'params' => []]);
+	$track1 = [];
+	$r1 = route(['get:/mix/' => [
+		function($next) use (&$track1){ $track1[] = 'b1'; return $next(); },
+		[
+			function($next) use (&$track1){ $track1[] = 'b2'; return $next(); },
+		],
+		'k1' => function($next) use (&$track1){ $track1[] = 'h1'; return 'val1'; },
+		function($next) use (&$track1){ $track1[] = 'a1'; return $next(); },
+		[
+			function($next) use (&$track1){ $track1[] = 'a2'; return $next(); },
+		],
+	]]);
+	container(null);
+	container("#in.input", ['method' => 'get', 'uri' => '/mix/k2', 'params' => []]);
+	$track2 = [];
+	$r2 = route(['get:/mix/' => [
+		function($next) use (&$track2){ $track2[] = 'b1'; return $next(); },
+		[
+			function($next) use (&$track2){ $track2[] = 'b2'; return $next(); },
+		],
+		'k1' => function($next) use (&$track2){ $track2[] = 'h1'; return 'val1'; },
+		function($next) use (&$track2){ $track2[] = 'a1'; return $next(); },
+		'k2' => function($next) use (&$track2){ $track2[] = 'h2'; return 'val2'; },
+		[
+			function($next) use (&$track2){ $track2[] = 'a2'; return $next(); },
+		],
+	]]);
+	return [$track1, $r1, $track2, $r2];
+}, [['b1', 'b2', 'h1'], ['get:/mix/k1'], ['b1', 'b2', 'a1', 'h2'], ['get:/mix/k2']]);
+test('路由 - 分组中间件：嵌套子路由内分组', function(){
+	container(null);
+	container("#in.input", ['method' => 'get', 'uri' => '/nest/deep', 'params' => []]);
+	$track = [];
+	$r = route(['get:/nest/' => [
+		fn($next) => $next(),
+		'deep' => [
+			[fn($next) => 'inner-group'],
+			fn($next) => 'after',
+		],
+	]]);
+	return [$track, $r];
+}, [[], ['get:/nest/deep']]);
 test();

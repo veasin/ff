@@ -36,14 +36,52 @@ namespace nx;
  *     ':'        => fn($next) => ...,    // 等效 ''
  * ]]);
  * ```
- * 智能子路由：commonBefore/commonAfter 自动包裹每个子 handler
+ * 智能子路由：int-key callable 为中间件（累积栈），string-key 为子路由
+ * ```
+ * // 前置中间件 + inline 子路由 + 后置中间件
+ * route(['get:/prefix/'=>[
+ *     fn($next) => ...,                  // 前置（所有子路由之前）
+ *     'post:run' => fn($next) => ...,    // 子路由
+ *     'get:exe'  => fn($next) => ...,    // 子路由
+ *     fn($next) => ...,                  // 后置（所有子路由之后）
+ * ]]);
+ * ```
+ * 也兼容旧格式 `['sub'=>fn]` 包裹子映射：
  * ```
  * route('get:/prefix/',
- *     fn($next) => ...,                  // 公共前置
- *     ['sub' => fn($next) => ...,        // 子 handler
- *      'exe' => fn($next) => ...],
- *     fn($next) => ...,                  // 公共后置
+ *     fn($next) => ...,
+ *     ['post:run' => fn($next) => ...],
+ *     fn($next) => ...,
  * );
+ * ```
+ * 中间件按出现位置决定归属：每个子路由获取到它位置为止的累积栈作为 before，
+ * 之后的所有中间件作为 after。尾部中间件追加给全体子路由的 after。
+ * ```
+ * // [b1, k1:fn1, b2, k2:fn2, a]
+ * // k1 → [b1, fn1, b2, a]     k2 → [b1, b2, fn2, a]
+ * ```
+ * 清单数组 `[fn, fn]` 自动展平入累积栈：
+ * ```
+ * route(['get:/prefix/'=>[
+ *     fn($next) => ...,                  // 前置
+ *     [fn($next) => ..., fn($next) => ...],// 展平为两个前置
+ *     'run' => fn($next) => ...,         // 子路由
+ *     fn($next) => ...,                  // 后置
+ * ]]);
+ * // → run 的 handler 链: [前置, fn1, fn2, handler, 后置]
+ * ```
+ * 嵌套子路由中每层均支持同样的栈机制：
+ * ```
+ * route(['get:/level1/'=>[
+ *     fn($next) => ...,                  // 外层前置
+ *     'level2/' => [
+ *         [fn($next) => ..., fn($next) => ...],// 内层前置组
+ *         'deep' => fn($next) => ...,    // 最终 handler
+ *         fn($next) => ...,              // 内层后置
+ *     ],
+ *     fn($next) => ...,                  // 外层后置
+ * ]]);
+ * // → deep: [外前置, 内前置A, 内前置B, handler, 内后置, 外后置]
  * ```
  * 多条路由匹配时，内部使用 middleware() 执行 handler，* 通配符支持阻断：
  * ```
@@ -73,49 +111,48 @@ function route(null|bool|string|array $match = null, array|callable ...$fns): ?a
 	$routes = is_array($match) ? $match : [$match => $fns];
 	$normalized = [];
 	foreach($routes as $key => $fn){
-		$list = match (true) {
-			!is_array($fn) => [$fn],
-			!array_is_list($fn) => [$fn],
-			default => $fn,
-		};
-		$subMap = null;
-		$before = [];
-		$after = [];
-		foreach($list as $item){
-			if($subMap) $after[] = $item;
-			elseif(is_array($item) && !array_is_list($item)) $subMap = $item;
-			else $before[] = $item;
-		}
-		if($subMap){
-			[$method, $path] = !str_contains($key, ':') ? ['', $key] : explode(':', $key, 2);
-			$pending = [[$subMap, $method, $path, $before, $after]];
-			while($pending){
-				[$curMap, $pMethod, $pPath, $pBefore, $pAfter] = array_shift($pending);
-				foreach($curMap as $sm => $sfn){
-					[$sm_method, $sm_uri] = !str_contains($sm, ':') ? [$pMethod, $sm] : explode(':', $sm, 2);
-					if($sm_method === '') $sm_method = $pMethod;
-					$accumPath = rtrim($pPath, '/') . ($sm_uri ? "/$sm_uri" : '');
-					if(is_array($sfn) && !array_is_list($sfn)){
-						$pending[] = [$sfn, $sm_method, $accumPath, $pBefore, $pAfter];
-						continue;
-					}
-					$nestedMap = null;
-					$innerBef = [];
-					$innerAft = [];
-					if(is_array($sfn)){
-						foreach($sfn as $item){
-							if($nestedMap) $innerAft[] = $item;
-							elseif(is_array($item) && !array_is_list($item)) $nestedMap = $item;
-							else $innerBef[] = $item;
-						}
-					}
-					if($nestedMap) $pending[] = [$nestedMap, $sm_method, $accumPath, [...$pBefore, ...$innerBef], [...$innerAft, ...$pAfter]];
-					else $normalized["$sm_method:$accumPath"] = is_array($sfn) ? [...$pBefore, ...$sfn, ...$pAfter] : [...$pBefore, $sfn, ...$pAfter];
-				}
+		$list = !is_array($fn) ? [$fn] : $fn;
+		$stack = [];
+		$subs = [];
+		foreach($list as $k => $v){
+			if(is_string($k)) $subs[$k] = ['h' => $v, 'p' => count($stack)];
+			elseif(is_array($v)){
+				if(!array_is_list($v)) foreach($v as $sk => $sv) $subs[$sk] = ['h' => $sv, 'p' => count($stack)];
+				else foreach($v as $item) if(is_callable($item)) $stack[] = $item;
 			}
+			elseif(is_callable($v)) $stack[] = $v;
+		}
+		if(!$subs){
+			$normalized[$key] = $list;
 			continue;
 		}
-		$normalized[$key] = $list;
+		[$method, $path] = !str_contains($key, ':') ? ['', $key] : explode(':', $key, 2);
+		$pending = [];
+		foreach($subs as $sk => $e) $pending[] = [$sk, $e['h'], $method, $path, array_slice($stack, 0, $e['p']), array_slice($stack, $e['p'])];
+		while($pending){
+			[$sm, $sfn, $pM, $pP, $pBef, $pAft] = array_shift($pending);
+			[$sm_m, $sm_u] = !str_contains($sm, ':') ? [$pM, $sm] : explode(':', $sm, 2);
+			if($sm_m === '') $sm_m = $pM;
+			$accPath = rtrim($pP, '/') . ($sm_u ? "/$sm_u" : '');
+			if(is_array($sfn)){
+				$is = [];
+				$iss = [];
+				foreach($sfn as $k2 => $v2){
+					if(is_string($k2)) $iss[$k2] = ['h' => $v2, 'p' => count($is)];
+					elseif(is_array($v2)){
+						if(!array_is_list($v2)) foreach($v2 as $sk => $sv) $iss[$sk] = ['h' => $sv, 'p' => count($is)];
+						else foreach($v2 as $item) if(is_callable($item)) $is[] = $item;
+					}
+					elseif(is_callable($v2)) $is[] = $v2;
+				}
+				if($iss){
+					foreach($iss as $ik => $ie) $pending[] = [$ik, $ie['h'], $sm_m, $accPath, [...$pBef, ...array_slice($is, 0, $ie['p'])], [...array_slice($is, $ie['p']), ...$pAft]];
+					continue;
+				}
+				$normalized["$sm_m:$accPath"] = [...$pBef, ...$is, ...$pAft];
+			}
+			else $normalized["$sm_m:$accPath"] = [...$pBef, $sfn, ...$pAft];
+		}
 	}
 	$deferred = container('#route.deferred');
 	if(is_array($deferred)){

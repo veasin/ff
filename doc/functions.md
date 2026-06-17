@@ -246,41 +246,70 @@ route(['get:/root/{root}/game/{id}/'=>[
 ]]);
 ```
 
-**智能子路由：** commonBefore/commonAfter 自动包裹每个子 handler
+**智能子路由：** int-key callable 为中间件（累积栈），string-key 为子路由
+```php
+// 前置中间件 + inline 子路由 + 后置中间件（数组形式）
+route(['get:/prefix/'=>[
+    fn($next) => ...,                  // 前置（所有子路由之前）
+    'post:run' => fn($next) => ...,    // 子路由
+    'get:exe'  => fn($next) => ...,    // 子路由
+    fn($next) => ...,                  // 后置（所有子路由之后）
+]]);
+```
+也兼容旧格式 `['sub'=>fn]` 包裹子映射：
 ```php
 route('get:/prefix/',
-    fn($next) => ...,                  // 公共前置
-    ['sub' => fn($next) => ...,        // 子 handler
-     'exe' => fn($next) => ...],
-    fn($next) => ...,                  // 公共后置
+    fn($next) => ...,
+    ['post:run' => fn($next) => ...],
+    fn($next) => ...,
 );
 ```
 
-**嵌套子路由：** 子映射支持任意层级嵌套，外层 before/after 逐层透传包裹
+中间件按出现位置决定归属：每个子路由获取到它位置为止的累积栈作为 before，之后作为 after。尾部追加给全体 after。
+```php
+// [b1, k1:fn1, b2, k2:fn2, a]
+// k1 → [b1, fn1, b2, a]
+// k2 → [b1, b2, fn2, a]
+```
+
+清单数组 `[fn, fn]` 自动展平入累积栈：
+```php
+route(['get:/prefix/'=>[
+    fn($next) => ...,                  // 前置
+    [fn($next) => ..., fn($next) => ...],// 展平为两个前置
+    'run' => fn($next) => ...,         // 子路由
+    fn($next) => ...,                  // 后置
+]]);
+// → run 的 handler 链: [前置, fn1, fn2, handler, 后置]
+```
+
+**嵌套子路由：** 子映射支持任意层级嵌套，每层同样支持累积栈机制
 ```php
 // 三层子映射展开
 route(['get:/a/'=>['b/'=>['c/'=>['d'=>fn($next)=>...]]]]);
 // → get:/a/b/c/d
 
 // 嵌套 + 智能包裹（外层前置/后置向内透传）
-route('get:/level1/',
-    fn($next) => auth($next),
-    ['level2/' => ['deep' => fn($next) => output(...)]],
-    fn($next) => log($next),
-);
-// → get:/level1/level2/deep 执行为 [auth, handler, log]
+route(['get:/level1/'=>[
+    fn($next) => auth($next),          // 外层前置
+    'level2/' => [                     // 子路由 => 嵌套
+        'deep' => fn($next) => output(...),
+    ],
+    fn($next) => log($next),           // 外层后置
+]]);
+// → deep: [auth, handler, log]
 
-// 嵌套 + 每层各自的前置/后置（全包裹）
-route('get:/level1/',
+// 嵌套 + 每层各自的中间件（含展平组）
+route(['get:/level1/'=>[
     fn($next) => ...,                  // 外层前置
-    ['level2/' => [
-        fn($next) => ...,              // 内层前置
-        ['deep' => fn($next) => ...],  // 最终 handler
+    'level2/' => [
+        [fn($next) => ..., fn($next) => ...],// 内层前置组（展平）
+        'deep' => fn($next) => ...,    // 最终 handler
         fn($next) => ...,              // 内层后置
-    ]],
+    ],
     fn($next) => ...,                  // 外层后置
-);
-// → get:/level1/level2/deep 执行为 [外层前置, 内层前置, handler, 内层后置, 外层后置]
+]]);
+// → deep: [外前置, 内前置A, 内前置B, handler, 内后置, 外后置]
 ```
 
 延时执行模式：
