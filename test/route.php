@@ -294,4 +294,73 @@ test('路由 - 不匹配时容器返回 null', function(){
 	route('get:/api/items', fn($next) => 'value');
 	return container('#route.result');
 }, null);
+test('路由 - 嵌套子路由：三层嵌套', function(){
+	container(null);
+	container("#in.input", ['method' => 'get', 'uri' => '/a/b/c/d', 'params' => []]);
+	return route(['get:/a/'=>['b/'=>['c/'=>['d'=>fn($next)=>'deep']]]]);
+}, ['get:/a/b/c/d']);
+test('路由 - 嵌套子路由：四层嵌套', function(){
+	container(null);
+	container("#in.input", ['method' => 'get', 'uri' => '/w/x/y/z', 'params' => []]);
+	return route(['*:/w/'=>['x/'=>['y/'=>['z'=>fn($next)=>'deep']]]]);
+}, ['*:/w/x/y/z']);
+test('路由 - 嵌套子路由：嵌套+外层 before/after', function(){
+	container(null);
+	container("#in.input", ['method' => 'get', 'uri' => '/level1/level2/deep', 'params' => []]);
+	$track = [];
+	$r = route('get:/level1/',
+		function($next) use (&$track){ $track[] = 'A'; return $next(); },
+		['level2/' => ['deep' => function($next) use (&$track){ $track[] = 'B'; return 'B-val'; }]],
+		function($next) use (&$track){ $track[] = 'C'; return $next(); },
+	);
+	return [$track, $r];
+}, [['A', 'B'], ['get:/level1/level2/deep']]);
+test('路由 - 嵌套子路由：内外全包裹', function(){
+	container(null);
+	container("#in.input", ['method' => 'get', 'uri' => '/level1/level2/deep', 'params' => []]);
+	$track = [];
+	$r = route('get:/level1/',
+		function($next) use (&$track){ $track[] = 'A'; return $next(); },
+		['level2/' => [
+			function($next) use (&$track){ $track[] = 'B'; return $next(); },
+			['deep' => function($next) use (&$track){ $track[] = 'C'; return $next(); }],
+			function($next) use (&$track){ $track[] = 'D'; return $next(); },
+		]],
+		function($next) use (&$track){ $track[] = 'E'; return $track; },
+	);
+	return [$track, $r];
+}, [['A', 'B', 'C', 'D', 'E'], ['get:/level1/level2/deep']]);
+test('路由 - 嵌套子路由：方法继承穿透', function(){
+	container(null);
+	container("#in.input", ['method' => 'post', 'uri' => '/a/b/c', 'params' => []]);
+	return route(['post:/a/'=>['b/'=>['c'=>fn($next)=>'match']]]);
+}, ['post:/a/b/c']);
+test('路由 - 嵌套子路由：方法覆盖', function(){
+	container(null);
+	container("#in.input", ['method' => 'post', 'uri' => '/a/b/c', 'params' => []]);
+	return route(['*:/a/'=>['post:b'=>['c'=>fn($next)=>'override']]]);
+}, ['post:/a/b/c']);
+test('路由 - 嵌套子路由：同级混合直接+嵌套', function(){
+	container(null);
+	container("#in.input", ['method' => 'get', 'uri' => '/a/b/nested/deep', 'params' => []]);
+	return route(['get:/a/'=>[
+		'flat' => fn($next) => 'flat',
+		'b/' => ['nested/' => ['deep' => fn($next) => 'nested-val']],
+	]]);
+}, ['get:/a/b/nested/deep']);
+test('路由 - 嵌套子路由：通配符多级', function(){
+	container(null);
+	container("#in.input", ['method' => 'get', 'uri' => '/a/b/c/anything/here', 'params' => []]);
+	return route(['get:/a/'=>['b/'=>['c/'=>['*'=>fn($next)=>'wild-nest']]]]);
+}, ['get:/a/b/c/*']);
+test('路由 - 嵌套子路由：不匹配返回null', function(){
+	container(null);
+	container("#in.input", ['method' => 'get', 'uri' => '/a/b/other', 'params' => []]);
+	return route(['get:/a/'=>['b/'=>['deep'=>fn($next)=>'val']]]);
+}, null);
+test('路由 - 嵌套子路由：前缀匹配空键', function(){
+	container(null);
+	container("#in.input", ['method' => 'get', 'uri' => '/a/b', 'params' => []]);
+	return route(['get:/a/'=>['b/'=>[''=>fn($next)=>'prefix']]]);
+}, ['get:/a/b']);
 test();

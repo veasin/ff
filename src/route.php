@@ -88,10 +88,30 @@ function route(null|bool|string|array $match = null, array|callable ...$fns): ?a
 		}
 		if($subMap){
 			[$method, $path] = !str_contains($key, ':') ? ['', $key] : explode(':', $key, 2);
-			foreach($subMap as $sm => $sfn){
-				[$sub_method, $sub_uri] = !str_contains($sm, ':') ? [$method, $sm] : explode(':', $sm, 2);
-				if($sub_method === '') $sub_method = $method;
-				$normalized["$sub_method:" . rtrim($path, '/') . ($sub_uri ? "/$sub_uri" : '')] = [...$before, $sfn, ...$after];
+			$pending = [[$subMap, $method, $path, $before, $after]];
+			while($pending){
+				[$curMap, $pMethod, $pPath, $pBefore, $pAfter] = array_shift($pending);
+				foreach($curMap as $sm => $sfn){
+					[$sm_method, $sm_uri] = !str_contains($sm, ':') ? [$pMethod, $sm] : explode(':', $sm, 2);
+					if($sm_method === '') $sm_method = $pMethod;
+					$accumPath = rtrim($pPath, '/') . ($sm_uri ? "/$sm_uri" : '');
+					if(is_array($sfn) && !array_is_list($sfn)){
+						$pending[] = [$sfn, $sm_method, $accumPath, $pBefore, $pAfter];
+						continue;
+					}
+					$nestedMap = null;
+					$innerBef = [];
+					$innerAft = [];
+					if(is_array($sfn)){
+						foreach($sfn as $item){
+							if($nestedMap) $innerAft[] = $item;
+							elseif(is_array($item) && !array_is_list($item)) $nestedMap = $item;
+							else $innerBef[] = $item;
+						}
+					}
+					if($nestedMap) $pending[] = [$nestedMap, $sm_method, $accumPath, [...$pBefore, ...$innerBef], [...$innerAft, ...$pAfter]];
+					else $normalized["$sm_method:$accumPath"] = is_array($sfn) ? [...$pBefore, ...$sfn, ...$pAfter] : [...$pBefore, $sfn, ...$pAfter];
+				}
 			}
 			continue;
 		}

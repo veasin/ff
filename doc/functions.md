@@ -1,10 +1,23 @@
-### 函数参考
+
+# 函数参考
+
+---
+
+> **目录**
+> - [container](#container---容器方法) | [env](#env---环境变量读取) | [name](#name---命名配置管理) | [args](#args---命令行参数解析) | [safe](#safe---安全调用)
+> - 输入层：[input](#input---输入数据获取) | [from](#from---从指定来源获取原始值) | [filter](#filter---数据验证与转换)
+> - 输出层：[output](#output---输出数据)
+> - 流程控制：[route](#route---路由匹配) | [middleware](#middleware---中间件执行引擎) | [hump](#hump---链式中间件执行器) | [hook](#hook---钩子系统)
+> - 缓存：[cache](#cache---多级缓存链) | [apcu](#apcu---APCu-缓存驱动) | [redis](#redis---redis-缓存驱动)
+> - 数据库：[db](#db---数据库操作)
+> - 国际化：[i18n](#i18n---多语言翻译)
+> - 开发调试：[log](#log---日志函数) | [test](#test---轻量级测试)
 
 ---
 
 **基础设施**
 
-#### container - 容器方法
+## container - 容器方法
 
 支持双生命周期（持久/请求级）与延迟构建的配置容器，适用于 Swoole/FrankenPHP 等常驻内存场景。在 php-fpm 或 apache 下，每次请求都是重置的，可以忽略相关逻辑。
 
@@ -26,7 +39,7 @@ container('plain*');//非闭包值忽略 *，返回 'string'
 
 ---
 
-#### env - 环境变量读取
+## env - 环境变量读取
 
 支持系统环境变量、`$_ENV`、`.env` 文件三种来源，自动类型转换（`'true'` → `true`、`'false'` → `false`、`'null'` → `null`、`'empty'` → `''`）。
 
@@ -40,7 +53,7 @@ env('APP_KEY');//读取 .env 文件
 
 ---
 
-#### name - 命名配置管理
+## name - 命名配置管理
 
 ```php
 $key = name('user.id');//返回 'user.id'
@@ -56,7 +69,7 @@ container('#name', ['cache' => ['user' => 'cache:user:{uid}']]);
 
 ---
 
-#### args - 命令行参数解析
+## args - 命令行参数解析
 
 解析命令行参数，支持短选项、长选项和引号值。
 
@@ -71,7 +84,7 @@ $args = args('--message="Hello World"');
 
 ---
 
-#### safe - 安全调用
+## safe - 安全调用
 
 封装 try/catch 模式，失败返回 `null`，省去重复的异常处理模板代码。
 
@@ -86,7 +99,7 @@ $data = safe(fn() => json_decode($raw, true, 512, JSON_THROW_ON_ERROR));//异常
 
 **输入层**
 
-#### input - 输入数据获取
+## input - 输入数据获取
 
 获取输入并验证，组合 `from()` + `filter()`。未指定来源时默认 `body`。
 
@@ -99,7 +112,7 @@ $list = input(['id', 'name'], 'body');//批量：list 数组+来源
 
 ---
 
-#### from - 从指定来源获取原始值
+## from - 从指定来源获取原始值
 
 支持来源：`query` | `cookie` | `file` | `params` | `header` | `input` | `body`。
 
@@ -122,7 +135,7 @@ $result = from(['id', 'name'], 'query');//批量获取
 
 ---
 
-#### filter - 数据验证与转换
+## filter - 数据验证与转换
 
 类型转换与验证规则链，规则可逗号分隔组合。
 
@@ -149,7 +162,7 @@ filter('13800138000', 'phone');//返回 '13800138000'
 
 **输出层**
 
-#### output - 输出数据
+## output - 输出数据
 
 支持多种格式和模板，核心签名 `output($data, $set)`。
 
@@ -196,7 +209,7 @@ container('#out.callback', function($response) {
 
 **流程控制**
 
-#### route - 路由匹配
+## route - 路由匹配
 
 支持 RESTful 路由、参数占位符、通配符和 CLI 路由。内部使用 `middleware()` 执行匹配到的路由处理函数，支持阻断：不调 `$next` 则终止后续路由。
 
@@ -243,6 +256,33 @@ route('get:/prefix/',
 );
 ```
 
+**嵌套子路由：** 子映射支持任意层级嵌套，外层 before/after 逐层透传包裹
+```php
+// 三层子映射展开
+route(['get:/a/'=>['b/'=>['c/'=>['d'=>fn($next)=>...]]]]);
+// → get:/a/b/c/d
+
+// 嵌套 + 智能包裹（外层前置/后置向内透传）
+route('get:/level1/',
+    fn($next) => auth($next),
+    ['level2/' => ['deep' => fn($next) => output(...)]],
+    fn($next) => log($next),
+);
+// → get:/level1/level2/deep 执行为 [auth, handler, log]
+
+// 嵌套 + 每层各自的前置/后置（全包裹）
+route('get:/level1/',
+    fn($next) => ...,                  // 外层前置
+    ['level2/' => [
+        fn($next) => ...,              // 内层前置
+        ['deep' => fn($next) => ...],  // 最终 handler
+        fn($next) => ...,              // 内层后置
+    ]],
+    fn($next) => ...,                  // 外层后置
+);
+// → get:/level1/level2/deep 执行为 [外层前置, 内层前置, handler, 内层后置, 外层后置]
+```
+
 延时执行模式：
 ```php
 route(true);//开启
@@ -265,7 +305,7 @@ route(['GET:/some/*' => fn($next) => $next(),       // 调 $next 放行
 
 ---
 
-#### middleware - 中间件执行引擎
+## middleware - 中间件执行引擎
 
 洋葱模型中间件执行器，支持阻断（不调 `$next` 则终止）。参数可以是闭包、文件路径或其他值。
 
@@ -283,7 +323,7 @@ middleware('fallback');//非可调用值作为初始值透传
 
 ---
 
-#### hump - 链式中间件执行器
+## hump - 链式中间件执行器
 
 洋葱模型变体，支持链式调用但不支持阻断。不调 `$next` 也会自动继续执行，并将当前返回值传给下一个。
 
@@ -295,7 +335,7 @@ hump('/path/to/file.php', $handler);//文件路径
 
 ---
 
-#### hook - 钩子系统
+## hook - 钩子系统
 
 注册/触发分离的钩子系统，与容器集成。生命周期模式下 `output()` 等函数自动挂载。
 
@@ -320,7 +360,7 @@ hook(null);//清空所有钩子
 
 **缓存**
 
-#### cache - 多级缓存链
+## cache - 多级缓存链
 
 接收中间件工厂或值，按顺序链式执行。返回 `null` 的中间件自动穿透到下一层。
 
@@ -332,7 +372,7 @@ cache(apcu('key', middleware: 60), redis('key', middleware: 60), fn($next) => db
 
 ---
 
-#### apcu - APCu 缓存驱动
+## apcu - APCu 缓存驱动
 
 支持 CRUD 和中间件工厂两种模式，统一签名 `apcu($key, $value, $set, $middleware)`。默认 TTL 为 0（永不过期）。
 
@@ -360,7 +400,7 @@ cache(apcu('key', 'fallback', middleware: true), fn($next) => null);
 
 ---
 
-#### redis - Redis 缓存驱动
+## redis - Redis 缓存驱动
 
 签名与 `apcu()` 完全一致，支持 CRUD 和中间件工厂两种模式。
 
@@ -389,7 +429,7 @@ cache(redis('key', 'fallback', middleware: 60), fn($next) => null);
 
 **数据库**
 
-#### db - 数据库操作
+## db - 数据库操作
 
 基于 PDO 的数据库操作，支持多种返回模式、事务和命名配置。
 
@@ -436,7 +476,7 @@ $affected = db(sql::table('users')->where(['id' => 1])->delete(), 'count');//删
 
 **国际化**
 
-#### i18n - 多语言翻译
+## i18n - 多语言翻译
 
 支持占位符替换和强制语言，框架翻译键格式 `#模块:key`。
 
@@ -461,7 +501,7 @@ container('^i18n.lang', 'en_US');
 
 **开发调试**
 
-#### log - 日志函数
+## log - 日志函数
 
 ```php
 log('用户登录');//基础用法，默认 level 为 info
@@ -482,7 +522,7 @@ container('#log', fn($level, $message, $context) => ...);//注入闭包
 
 ---
 
-#### test - 轻量级测试
+## test - 轻量级测试
 
 支持直接比较、闭包断言和异常类型断言。value/assign 执行中抛异常被捕获，异常对象参与比较（异常 vs 具体值必然失败），输出时显示异常 message。
 

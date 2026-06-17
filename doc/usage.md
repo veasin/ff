@@ -168,6 +168,18 @@ route('get:/api/{ver}/',
     fn($next) => log($next),               // 公共后置日志
 );
 
+// 嵌套子路由：多层子映射自动递归展开
+route(['get:/a/'=>['b/'=>['c/'=>['d'=>fn($next)=>...]]]]);
+// → get:/a/b/c/d
+
+// 嵌套 + 智能包裹：外层前置/后置向内透传
+route('get:/level1/',
+    fn($next) => auth($next),
+    ['level2/' => ['deep' => fn($next) => output(...)]],
+    fn($next) => log($next),
+);
+// → get:/level1/level2/deep 执行为 [auth, handler, log]
+
 // 延时执行：先收集再统一触发
 route(true);
 route('GET:/api/items', fn($next) => output(loadItems()));
