@@ -200,16 +200,45 @@ container('#out.callback', function($response) {
 
 支持 RESTful 路由、参数占位符、通配符和 CLI 路由。内部使用 `middleware()` 执行匹配到的路由处理函数，支持阻断：不调 `$next` 则终止后续路由。
 
+**核心规则：未显式指定的部分从父级继承；顶级路由的隐式父级是 `['*', '/']`**
+
+路由键统一模型 `method:path`：
+- 无冒号 → 整个字符串为 path，method 继承父级
+- 有冒号 → 左 method、右 path；空侧从父继承
+- `''` 或 `':'` → 两侧继承（前缀匹配）
+
 ```php
 route('GET:/users', function($next) { output(['users' => []]); });//基础路由
-route('GET:/user/:id', function() { ... });//带参数（:param 或 {param}）
+route('GET:/user/{id}', function() { ... });//带参数 {param}
 route('POST:/api/user', function() { ... });//POST 路由
 route(['get:/api/list' => fn() => 'list', 'post:/api/create' => fn() => 'create']);//路由映射数组
 route('GET:/api/*', function() { ... });//通配符路由
+route('/bare-path', fn($next) => 'match');//无方法前缀→继承父级(*)，匹配任意方法
 route('cli:verbose', function() { ... });//CLI 路由
 route(true);//开启延时模式
 route();//触发执行收集的路由
 route(null);//清空已收集的路由
+```
+
+**组前缀展开：** 子映射中的子键自动拼接父路径
+```php
+route(['get:/root/{root}/game/{id}/'=>[
+    'post:run' => fn($next) => ...,    // → get:/root/{root}/game/{id}/run
+    'action'   => fn($next) => ...,    // → get:/root/{root}/game/{id}/action（继承父 method）
+    ''         => fn($next) => ...,    // → get:/root/{root}/game/{id}/（前缀匹配）
+    '*'        => fn($next) => ...,    // → get:/root/{root}/game/{id}/*（通配符）
+    ':'        => fn($next) => ...,    // 等效 ''
+]]);
+```
+
+**智能子路由：** commonBefore/commonAfter 自动包裹每个子 handler
+```php
+route('get:/prefix/',
+    fn($next) => ...,                  // 公共前置
+    ['sub' => fn($next) => ...,        // 子 handler
+     'exe' => fn($next) => ...],
+    fn($next) => ...,                  // 公共后置
+);
 ```
 
 延时执行模式：

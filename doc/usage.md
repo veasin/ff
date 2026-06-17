@@ -128,16 +128,35 @@ container('#env', __DIR__ . '/.env');
 
 - 需要多分支统一入口时使用，根据 method+path 分发到对应 handler
 - 扩展在 `input()` 之上：请求进入时先匹配路由，定位 handler 后再走标准的 input→业务→output
+- **核心规则：未显式指定的部分从父级继承；顶级路由的隐式父级是 `['*', '/']`**
+  - 无冒号 → path，method 继承父级（如 `/bare-path` 匹配任意 method）
+  - 有冒号 → `method:path`，空侧从父继承
+  - `''` 或 `':'` → 两侧继承（前缀匹配）
 
 ```php
 // 多个路由合并为一次数组调用
 route([
     'GET:/api/items'      => fn() => output(loadItems()),
     'POST:/api/items'     => fn() => output(createItem(input('text', 'body,str')), 201),
-    'PUT:/api/items/:id'  => function () {
+    'PUT:/api/items/{id}'  => function () {
         output(updateItem(input('id', 'params', 'int')));
     },
 ]);
+
+// 组前缀：子映射中的子键自动拼接父路径
+route(['get:/api/{ver}/'=>[
+    'list'       => fn() => ...,
+    'post:create'=> fn() => ...,
+    ''           => fn() => ...,   // 前缀匹配
+]]);
+
+// 智能子路由：公共前置/后置包裹每个子 handler
+route('get:/api/{ver}/',
+    fn($next) => auth($next),              // 公共前置校验
+    ['list' => fn($next) => output(list()),
+     'create' => fn($next) => output(create())],
+    fn($next) => log($next),               // 公共后置日志
+);
 
 // 延时执行：先收集再统一触发
 route(true);
