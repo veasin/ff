@@ -52,13 +52,14 @@ namespace nx;
  * route(['GET:/some/*' => fn($next) => $next(),       // 调 $next 放行
  *        'GET:/some/action' => fn($next) => 'action']);// 继续执行
  * ```
- * @param null|bool|string|array $match   匹配规则或路由映射数组
- *                                        true=开启延时模式
- *                                        null=清空已收集路由
- * @param mixed                  ...$fns  路由处理函数列表或子路由映射
- * @return mixed
+ * @param null|bool|string|array $match  匹配规则或路由映射数组
+ *                                       true=开启延时模式
+ *                                       null=清空已收集路由
+ * @param array|callable         ...$fns 路由处理函数列表或子路由映射
+ * @return ?string[]                     匹配成功的路由键数组，未匹配返回 null
+ *                                       匹配结果转存到容器 #route.result
  */
-function route(null|bool|string|array $match = null, mixed ...$fns): mixed{
+function route(null|bool|string|array $match = null, array|callable ...$fns): ?array{
 	if(0 === func_num_args()){
 		$deferred = container('#route.deferred');
 		if(!is_array($deferred)) return null;
@@ -90,9 +91,9 @@ function route(null|bool|string|array $match = null, mixed ...$fns): mixed{
 			foreach($subMap as $sm => $sfn){
 				[$sub_method, $sub_uri] = !str_contains($sm, ':') ? [$method, $sm] : explode(':', $sm, 2);
 				if($sub_method === '') $sub_method = $method;
-				$key = "$sub_method:$path" . ($sub_uri ? "/$sub_uri" : '');
-				$list = [...$before, $sfn, ...$after];
+				$normalized["$sub_method:" . rtrim($path, '/') . ($sub_uri ? "/$sub_uri" : '')] = [...$before, $sfn, ...$after];
 			}
+			continue;
 		}
 		$normalized[$key] = $list;
 	}
@@ -102,6 +103,7 @@ function route(null|bool|string|array $match = null, mixed ...$fns): mixed{
 		return container('#route.deferred', $deferred);
 	}
 	$handlers = [];
+	$matchedKeys = [];
 	$currentMethod = from('method', 'input');
 	$params = from('params', 'input') ?? [];
 	$reqSegments = $currentMethod === 'cli' ? [] : array_values(array_filter(explode('/', parse_url(from('uri', 'input'), PHP_URL_PATH) ?: '/')));
@@ -118,7 +120,10 @@ function route(null|bool|string|array $match = null, mixed ...$fns): mixed{
 					break;
 				}
 			}
-			if($matched) $handlers = [...$handlers, ...is_array($fn) ? $fn : [$fn]];
+			if($matched){
+				$handlers = [...$handlers, ...is_array($fn) ? $fn : [$fn]];
+				$matchedKeys[] = $m;
+			}
 			continue;
 		}
 		if($method !== '*' && $method !== '' && $method !== $currentMethod) continue;
@@ -145,8 +150,10 @@ function route(null|bool|string|array $match = null, mixed ...$fns): mixed{
 		if($reqIndex === count($reqSegments) && ($isWildcard || $reqIndex === count($routeSegments))){
 			$params = [...$params, ...$param];
 			$handlers = [...$handlers, ...is_array($fn) ? $fn : [$fn]];
+			$matchedKeys[] = $m;
 		}
 	}
 	container('#in.params', $params);
-	return $handlers ? middleware(...$handlers) : null;
+	container('#route.result', $handlers ? middleware(...$handlers) : null);
+	return $matchedKeys ?: null;
 }

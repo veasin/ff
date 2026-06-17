@@ -132,16 +132,26 @@ container('#env', __DIR__ . '/.env');
   - 无冒号 → path，method 继承父级（如 `/bare-path` 匹配任意 method）
   - 有冒号 → `method:path`，空侧从父继承
   - `''` 或 `':'` → 两侧继承（前缀匹配）
+- **返回值：** 匹配成功的路由键数组（`string[]`），未匹配返回 `null`
+- **middleware 结果：** 转存 `container('#route.result')`，不随 route() 返回值暴露
 
 ```php
-// 多个路由合并为一次数组调用
-route([
+$keys = route([
     'GET:/api/items'      => fn() => output(loadItems()),
     'POST:/api/items'     => fn() => output(createItem(input('text', 'body,str')), 201),
     'PUT:/api/items/{id}'  => function () {
         output(updateItem(input('id', 'params', 'int')));
     },
 ]);
+// $keys = ['PUT:/api/items/{id}']  // 匹配到的路由键数组
+
+// 无 handler：声明路由但不处理，匹配成功仍返回 key 数组（不视为 404）
+$keys = route('GET:/api/health');
+// $keys = ['GET:/api/health']，middleware 结果为空
+
+// 需要 middleware 返回值时从容器读取
+route('GET:/api/items', fn($next) => loadItems());
+$result = container('#route.result');
 
 // 组前缀：子映射中的子键自动拼接父路径
 route(['get:/api/{ver}/'=>[
@@ -161,7 +171,7 @@ route('get:/api/{ver}/',
 // 延时执行：先收集再统一触发
 route(true);
 route('GET:/api/items', fn($next) => output(loadItems()));
-route();
+route();  // 返回匹配的 key 数组
 ```
 
 ---

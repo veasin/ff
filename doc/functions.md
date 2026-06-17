@@ -200,6 +200,8 @@ container('#out.callback', function($response) {
 
 支持 RESTful 路由、参数占位符、通配符和 CLI 路由。内部使用 `middleware()` 执行匹配到的路由处理函数，支持阻断：不调 `$next` 则终止后续路由。
 
+**返回值：** 匹配成功的路由键数组（`string[]`），未匹配返回 `null`。middleware 执行结果转存到 `#route.result`。
+
 **核心规则：未显式指定的部分从父级继承；顶级路由的隐式父级是 `['*', '/']`**
 
 路由键统一模型 `method:path`：
@@ -208,7 +210,7 @@ container('#out.callback', function($response) {
 - `''` 或 `':'` → 两侧继承（前缀匹配）
 
 ```php
-route('GET:/users', function($next) { output(['users' => []]); });//基础路由
+$keys = route('GET:/users', function($next) { output(['users' => []]); });//基础路由，$keys=['GET:/users']
 route('GET:/user/{id}', function() { ... });//带参数 {param}
 route('POST:/api/user', function() { ... });//POST 路由
 route(['get:/api/list' => fn() => 'list', 'post:/api/create' => fn() => 'create']);//路由映射数组
@@ -216,7 +218,7 @@ route('GET:/api/*', function() { ... });//通配符路由
 route('/bare-path', fn($next) => 'match');//无方法前缀→继承父级(*)，匹配任意方法
 route('cli:verbose', function() { ... });//CLI 路由
 route(true);//开启延时模式
-route();//触发执行收集的路由
+route();//触发执行收集的路由，返回匹配的 key 数组
 route(null);//清空已收集的路由
 ```
 
@@ -249,7 +251,9 @@ route('POST:/api/items', fn($next) => { /* ... */ });
 route();//统一触发
 ```
 
-**$next 规则：** 匹配到多条路由时按顺序执行，调 `$next(...)` 才继续下一条；不调 `$next` 则阻断并返回当前路由的返回值；多次调 `$next` 只有第一次生效。
+**$next 规则：** 匹配到多条路由时按顺序执行，调 `$next(...)` 才继续下一条；不调 `$next` 则阻断当前路由链。middleware 最终结果转存 `#route.result`，不随 route() 返回值暴露。
+
+**无 handler 声明：** `route('GET:/path')` 不传函数时，匹配成功仍返回 key 数组（不视为 404），middleware 结果为空。适用于只声明路由存在但不需处理的场景。
 
 多条路由匹配 `*` 通配符阻断示例：
 ```php
