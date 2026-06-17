@@ -520,6 +520,7 @@ $affected = db(sql::table('users')->where(['id' => 1])->delete(), 'count');//删
 i18n(lang: 'en_US');//设置当前语言
 $msg = i18n('#error:internal');//框架翻译
 $msg = i18n('#error:internal', 'en_US');//强制语言
+$msg = i18n('{message}', ['message' => 'error msg']);//无翻译时，{message} 替换为 'error msg'
 $msg = i18n('welcome', ['name' => '张三']);//{name} 占位符替换
 $msg = i18n('dot.key');//. 自动转 _
 ```

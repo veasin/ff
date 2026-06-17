@@ -4,12 +4,13 @@ namespace nx;
 /**
  * 多语言翻译函数，支持占位符替换和强制语言。
  * ```
- * i18n(lang: 'en_US');                               // 设置当前语言
+ * i18n(lang: 'en_US');                                     // 设置当前语言
  * $msg = i18n('#error:internal');                     // 框架翻译
- * $msg = i18n('welcome', ['name' => '张三']);          // 用户翻译 + {name} 替换
+ * $msg = i18n('{message}', ['message' => 'error msg']);    // 无翻译时，{message} 替换为 'error msg'
+ * $msg = i18n('welcome', ['name' => '张三']);              // 用户翻译 + {name} 替换
  * $msg = i18n('#error:internal', 'en_US');             // 强制语言
- * $msg = i18n('welcome', ['name' => 'Alice'], 'en_US');// 强制语言 + 替换
- * $msg = i18n('welcome.name', ['name' => 'A']);        // . 自动转 _
+ * $msg = i18n('welcome', ['name' => 'Alice'], 'en_US');    // 强制语言 + 替换
+ * $msg = i18n('welcome.name', ['name' => 'A']);            // . 自动转 _
  * ```
  * 框架默认翻译内置在 container core 中，用户可单条增量覆盖：
  * ```
@@ -27,8 +28,7 @@ function i18n(?string $key = null, null|string|array $params = null, ?string $la
 	if(is_string($params)) [$lang, $params] = [$params, null];
 	$lang ??= container('i18n.lang');
 	if($lang === null || $key === null || $key === '') return $key ?? '';
-	$text = container("i18n.{$lang}.{$key}");
-	if($text === null) return $key;
+	$text = container("i18n.$lang.$key") ?? $key;
 	if($params) foreach($params as $k => $v) $text = str_replace("{{$k}}", (string)$v, $text);
 	return $text;
 }
