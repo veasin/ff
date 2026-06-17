@@ -83,6 +83,15 @@ namespace nx;
  * ]]);
  * // → deep: [外前置, 内前置A, 内前置B, handler, 内后置, 外后置]
  * ```
+ * 外层数组的 int-key callable（bare function）自动视为 '*' 通配符，等效于写 `'*' => fn`：
+ * ```
+ * route([
+ *     'get:/list' => fn($next) => ...,       // 普通路由
+ *     fn($next) => auth($next),              // 等效 '*' => fn($next) => auth($next)
+ *     'post:/create' => fn($next) => ...,
+ * ]);
+ * // → auth 包裹其后所有匹配的路由
+ * ```
  * 多条路由匹配时，内部使用 middleware() 执行 handler，* 通配符支持阻断：
  * ```
  * route(['GET:/some/*' => fn($next) => 'wildcard',   // /some/action 匹配时，不调 $next 阻断后续
@@ -111,6 +120,13 @@ function route(null|bool|string|array $match = null, array|callable ...$fns): ?a
 	$routes = is_array($match) ? $match : [$match => $fns];
 	$normalized = [];
 	foreach($routes as $key => $fn){
+		if(is_int($key)){
+			if(isset($normalized['*'])){
+				$normalized['*'] = [...$normalized['*'], ...(!is_array($fn) ? [$fn] : $fn)];
+				continue;
+			}
+			$key = '*';
+		}
 		$list = !is_array($fn) ? [$fn] : $fn;
 		$stack = [];
 		$subs = [];

@@ -433,4 +433,43 @@ test('路由 - 分组中间件：嵌套子路由内分组', function(){
 	]]);
 	return [$track, $r];
 }, [[], ['get:/nest/deep']]);
+test('路由 - 缺省key通配符：包裹其他路由', function(){
+	container(null);
+	container("#in.input", ['method' => 'get', 'uri' => '/any/path', 'params' => []]);
+	$keys = route([
+		fn($next) => 'wrap(' . $next() . ')',
+		'get:/any/path' => fn($next) => 'inner',
+	]);
+	return ['keys' => $keys, 'result' => container('#route.result')];
+}, ['keys' => ['*', 'get:/any/path'], 'result' => 'wrap(inner)']);
+test('路由 - 缺省key通配符：阻断后续路由', function(){
+	container(null);
+	container("#in.input", ['method' => 'get', 'uri' => '/block/test', 'params' => []]);
+	$keys = route([
+		fn($next) => 'blocked',
+		'get:/block/test' => fn($next) => 'should-not-reach',
+	]);
+	return ['keys' => $keys, 'result' => container('#route.result')];
+}, ['keys' => ['*', 'get:/block/test'], 'result' => 'blocked']);
+test('路由 - 缺省key通配符：匹配任意深度路径', function(){
+	container(null);
+	container("#in.input", ['method' => 'post', 'uri' => '/a/b/c', 'params' => []]);
+	$keys = route([
+		fn($next) => 'catch:' . $next(),
+		'post:/a/b/c' => fn($next) => 'deep',
+	]);
+	return ['keys' => $keys, 'result' => container('#route.result')];
+}, ['keys' => ['*', 'post:/a/b/c'], 'result' => 'catch:deep']);
+test('路由 - 缺省key通配符：不干扰子路由组', function(){
+	container(null);
+	container("#in.input", ['method' => 'get', 'uri' => '/api/users', 'params' => []]);
+	$keys = route([
+		fn($next) => 'wrap(' . $next() . ')',
+		'api/' => [
+			fn($next) => $next(['role' => 'admin']),
+			'get:users' => fn($next, $ctx) => 'users:' . ($ctx['role'] ?? 'none'),
+		],
+	]);
+	return ['keys' => $keys, 'result' => container('#route.result')];
+}, ['keys' => ['*', 'get:api/users'], 'result' => 'wrap(users:admin)']);
 test();
