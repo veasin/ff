@@ -86,14 +86,21 @@ $args = args('--message="Hello World"');
 
 ## safe - 安全调用
 
-封装 try/catch 模式，失败返回 `null`，省去重复的异常处理模板代码。
+封装 try/catch 模式，失败返回 `null`，省去重复的异常处理模板代码。通过容器注册错误处理器可按异常类型区分响应。
 
 ```php
 $users = safe(fn() => db('SELECT * FROM users'));//无参调用
 $user = safe(fn($id) => db('SELECT * FROM users WHERE id=?', [$id]), 1);//带参数调用
 $result = safe(fn($a, $b) => $a / $b, 10, 0);//多参数，返回 null
 $data = safe(fn() => json_decode($raw, true, 512, JSON_THROW_ON_ERROR));//异常时静默降级
+container('#safe', fn(\Throwable $e) => match(true){//注册异常处理器
+    $e instanceof \PDOException       => ['err' => 'db', 'msg' => $e->getMessage()],
+    $e instanceof \InvalidArgumentException => ['err' => 'val', 'msg' => $e->getMessage()],
+    default                           => null,
+});
 ```
+
+处理器返回 `null` 时仍走"失败返回 null"的默认行为。处理器不影响调用成功的返回值。
 
 ---
 

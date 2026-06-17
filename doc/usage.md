@@ -377,10 +377,22 @@ container('#name', ['cache' => ['user' => 'cache:user:{uid}']]);
 $key = name('user', ['uid' => 123], 'cache');  // 'cache:user:123'
 ```
 
-**safe()** — 异常兜底工具，调用可能抛异常但失败可接受时使用，失败返回 null
+**safe()** — 异常兜底工具，调用可能抛异常但失败可接受时使用，失败返回 null。需要按异常类型区分处理时，通过容器注册错误处理器：
 
 ```php
 $data = safe(fn() => json_decode($raw, true, 512, JSON_THROW_ON_ERROR));
+
+// 按异常类型区分处理
+container('#safe', fn(\Throwable $e) => match(true){
+    $e instanceof \PDOException       => fallbackDb(),
+    $e instanceof \ValueError         => fallbackValue(),
+    $e instanceof \RuntimeException   => null,  // 仍返回 null
+    default                           => null,
+});
+$result = safe(fn() => db('SELECT ...'));
+if($result === null && !container('#safe')){
+    // 处理器返回 null，说明是默认异常，不需要特殊处理
+}
 ```
 
 **args()** — CLI 参数解析底层，框架内部使用，正常项目中不应直接调用
