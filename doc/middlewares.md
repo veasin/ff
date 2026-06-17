@@ -142,17 +142,28 @@ middleware(csrf(verify: true), $handler);//验证 token
 
 ---
 
-## error(debug) — 异常处理
+## error(statusMap) — 异常处理
 
-捕获所有 `\Throwable` 异常。调试模式返回完整堆栈（含 `error`、`file`、`line`、`trace`、`type`），生产模式返回通用错误。
+捕获所有 `\Throwable` 异常，根据异常类型映射状态码和错误消息。未匹配的异常返回 `500` 且无 body。
 
 ```php
-middleware(error(debug: true), $handler);//开发环境，显示完整错误
-middleware(error(), $handler);//生产环境，返回通用错误
+middleware(error(), $handler);                                            // 默认 500，无 body
+middleware(error([\InvalidArgumentException::class => 400]), $handler);   // int：仅状态码
+middleware(error([\RuntimeException::class => [500, '#error:msg']]), $handler);// [code, msg]：i18n(msg) + 状态码
+middleware(error([\DomainException::class => [422, null]]), $handler);    // [code, null]：查 container("#error:422")，无则无 body
+```
+
+`int` 值只设置状态码，不输出 body。`[int, string]` 中 string 为 i18n 键，支持上下文占位符：`{status}`、`{code}`、`{message}`、`{file}`、`{line}`。
+
+未配置消息时自动回退到 `container("#error:$code")` 查找，存在则过 i18n，不存在则无 body：
+
+```php
+container('#error:400', '#app:bad_request');
+container('i18n.zh_CN.#app:bad_request', '错误的请求');
 ```
 
 参数：
-- **`$debug`**: `bool` 默认 `false` 是否开启调试模式
+- **`$statusMap`**: `array` 默认 `[]` 异常类名映射，值为 `int`（仅状态码）或 `[int, ?string]`（状态码 + i18n 键或 null 回退）
 
 ---
 
