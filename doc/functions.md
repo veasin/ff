@@ -10,6 +10,7 @@
 > - 流程控制：[route](#route---路由匹配) | [middleware](#middleware---中间件执行引擎) | [hump](#hump---链式中间件执行器) | [hook](#hook---钩子系统)
 > - 缓存：[cache](#cache---多级缓存链) | [apcu](#apcu---APCu-缓存驱动) | [redis](#redis---redis-缓存驱动)
 > - 数据库：[db](#db---数据库操作)
+> - HTTP客户端：[http](#http---http-请求)
 > - 国际化：[i18n](#i18n---多语言翻译)
 > - 开发调试：[log](#log---日志函数) | [test](#test---轻量级测试)
 
@@ -123,13 +124,19 @@ $list = input(['id', 'name'], 'body');//批量：list 数组+来源
 
 支持来源：`query` | `cookie` | `file` | `params` | `header` | `input` | `body`。
 
+$name 支持三种形态：
+- **string**：单个 key 读取，不存在返回 null
+- **list 数组**：批量读取，不存在的 key 返回 null
+- **map 数组**：批量读取，value 作为默认值（source 中为 null 时兜底）
+
 ```php
-$id = from('id', 'body');//从 Body 获取
-$name = from('name', 'query');//从 Query 获取
-$token = from('authorization', 'header');//从 Header 获取
-$data = from('id', ['id' => 123, 'name' => 'test']);//直接使用数组作为来源
-$body = from(null, 'body');//获取整个来源
-$result = from(['id', 'name'], 'query');//批量获取
+$id = from('id', 'body');                                // 单个 key
+$name = from('name', 'query');                           // 单个 key
+$token = from('authorization', 'header');                // 单个 key
+$data = from('id', ['id' => 123, 'name' => 'test']);    // 直接使用数组作为来源
+$body = from(null, 'body');                              // 获取整个来源
+$result = from(['id', 'name'], 'query');                 // list 批量读取
+$data  = from(['id' => 0, 'name' => '?'], 'query');      // map 批量读取 + 默认值兜底
 ```
 
 容器配置：
@@ -506,6 +513,131 @@ $id = db(sql::table('users')->insert(['name' => 'John']), 'id');//插入
 $user = db(sql::table('users')->where(['id' => 1])->select(), 'row');//查询
 $affected = db(sql::table('users')->where(['id' => 1])->update(['name' => 'Jane']), 'count');//更新
 $affected = db(sql::table('users')->where(['id' => 1])->delete(), 'count');//删除
+```
+
+---
+
+**HTTP 客户端**
+
+## http - HTTP 请求
+
+HTTP 客户端函数，支持 GET/POST/PUT/PATCH/DELETE/HEAD/OPTIONS。一函数多用：`'METHOD url'` 指定方法与 URL，无空格默认 GET。自动选择 cURL（优先）或 PHP stream 驱动。body 为 array 时按 Content-Type 自动编码，默认 JSON。连接失败返回 `null`。
+
+```php
+$data = http('GET https://api.example.com/users');              // GET
+$data = http('https://api.example.com/users');                   // 无空格默认 GET
+$user = http('POST https://api.example.com/users', ['name' => 'John']); // POST，数组 body 自动 JSON
+$user = http('PUT https://api.example.com/users/1', ['name' => 'Jane']); // PUT
+$r    = http('PATCH https://api.example.com/users/1', ['age' => 30]);    // PATCH
+$r    = http('DELETE https://api.example.com/users/1');                   // DELETE
+$r    = http('HEAD https://api.example.com/users');                       // HEAD，body 为空
+$r    = http('OPTIONS https://api.example.com/users');                    // OPTIONS
+```
+
+**参数：**
+- **`$request`**: `string` - `'METHOD url'`，无空格默认 GET
+- **`$body`**: `mixed` - 请求体。array 按 Content-Type 编码（默认 JSON）；string 原样发送
+- **`$query`**: `?array` - URL 查询参数，自动拼接到 URL
+- **`$headers`**: `?array` - 请求头，支持关联 `['Key' => 'val']` 和扁平 `['Key: val']` 两种格式
+- **`$option`**: `?array` - 扩展配置，支持 `body`/`query`/`headers` 覆盖、`timeout`、`ssl_verify`、`redirect`、`log`、`encode`、`decode`
+- **`$mode`**: `?string` - 返回模式，`null` 完整 | `'body'` | `'code'` | `'ok'` | `'headers'`
+
+```php
+// Query 参数
+$data = http('GET https://api.example.com/users', query: ['page' => 1, 'limit' => 20]);
+
+// 自定义 Header（关联格式）
+$data = http('GET https://api.example.com/users', headers: ['Authorization' => 'Bearer xxx']);
+
+// 自定义 Header（扁平格式）
+$data = http('GET https://api.example.com/users', headers: ['Authorization: Bearer xxx']);
+
+// $option 覆盖 body/query/headers
+$data = http('POST https://api.example.com/users', option: [
+    'body' => ['name' => 'John'],
+    'query' => ['debug' => 1],
+    'headers' => ['X-Trace: 1'],
+]);
+
+// 超时与 SSL
+$data = http('GET https://api.example.com/users', option: ['timeout' => 10, 'ssl_verify' => true]);
+
+// 禁止重定向
+$data = http('GET https://api.example.com/users', option: ['redirect' => 0]);
+
+// 开启日志（使用框架 log() 函数输出）
+$data = http('GET https://api.example.com/users', option: ['log' => true]);
+
+// encode/decode 控制
+$data = http('POST https://api.example.com/form', ['a'=>1], option: ['encode'=>'form', 'decode'=>'json']);  // form 发送，json 解码
+$data = http('POST https://api.example.com/custom', $data, option: ['encode'=>fn($b,$c)=>my_encode($b)]);   // 自定义编码
+$raw = http('GET https://api.example.com/raw', mode:'body', option: ['decode'=>'raw']);                      // 强制原始字符串
+```
+
+**返回格式（`$mode = null`）：**
+
+```php
+// 完整返回
+$r = http('GET https://api.example.com/users');
+// ['body' => [...], 'code' => 200, 'headers' => [...], 'message' => '']
+
+// 模式裁剪
+$body    = http('GET https://api.example.com/users', mode: 'body');    // 只返回 body
+$code    = http('GET https://api.example.com/users', mode: 'code');    // 只返回状态码
+$ok      = http('GET https://api.example.com/users', mode: 'ok');      // true (2xx) / false
+$headers = http('GET https://api.example.com/users', mode: 'headers'); // 只返回响应头
+```
+
+**encode/decode 控制：**
+
+通过 `option.encode` 和 `option.decode` 控制请求体编码和响应解码。未设 `decode` 时默认同 `encode`（便于对称场景）。
+
+**encode（请求体编码，仅对 array/iterable body 生效）：**
+
+| 值 | 行为 |
+|---|---|
+| `null`（默认） | 按已有 Content-Type 判断：urlencoded→`http_build_query`，其他或无→`json_encode`，无 CT 时自动添加 |
+| `'json'` | 强制 `json_encode`，无 CT 时自动添加 |
+| `'form'` | 强制 `http_build_query`，无 CT 时自动添加 `Content-Type: application/x-www-form-urlencoded` |
+| `Closure` | `fn(mixed $body, 'encode'): ?string` 自定义编码，返回 null 时不发送 body |
+
+自动添加的 Content-Type 不会覆盖已存在的 header。
+
+**decode（响应解码，对 `mode=null` 和 `mode='body'` 生效）：**
+
+| 值 | 行为 |
+|---|---|
+| `null`（默认） | 按 Content-Type 自动：json→`json_decode`，urlencoded→`parse_str`，`#in.content` 扩展解析器（与 `from()` 共享），无匹配时保持原始 |
+| `'json'` | 强制 `json_decode` |
+| `'form'` | 强制 `parse_str` |
+| `'raw'` | 保持原始字符串，不解码 |
+| `Closure` | `fn(string $raw, 'decode'): mixed` 自定义解码 |
+
+**容器配置：**
+
+```php
+// 全局 HTTP 配置
+container('#http', ['timeout' => 10, 'ssl_verify' => false]);
+
+// 驱动特定配置（cURL 优先于全局）
+container('#http.curl', ['timeout' => 5, 'redirect' => 3]);
+
+// PHP stream 配置
+container('#http.stream', ['timeout' => 15]);
+
+// 自定义驱动（覆盖自动选择）
+container('#http.driver', fn($method, $url, $body, $headers, $config) => [
+    // 返回 ['body' => ..., 'code' => ..., 'headers' => [...], 'message' => '']
+]);
+```
+
+配置优先级：`$option` 调用时传参 > `#http.curl`/`#http.stream` 驱动配置 > `#http` 全局配置。
+
+**失败处理：** 连接超时、DNS 解析失败、SSL 握手失败等网络错误统一返回 `null`，通过 `mode: 'ok'` 或 `=== null` 判断。
+
+```php
+$r = http('GET https://api.example.com/users', mode: 'ok') or log('请求失败');
+if(($data = http('GET https://api.example.com/users')) === null) log('网络错误');
 ```
 
 ---

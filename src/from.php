@@ -16,30 +16,17 @@ namespace nx;
  * $name = from('name', 'body');                                     // 从 Body 获取
  * $token = from('authorization', 'header');                         // 从 Header 获取
  * $allHeaders = from(null, 'header');                               // 获取整个来源
- * $values = from(['id', 'name'], 'query');                          // 批量获取
+ * $values = from(['id', 'name'], 'query');                          // 批量获取（list）
  * $data = from('id', ['id' => 123, 'name' => 'test']);             // 直接使用数组
+ * $data = from(['id' => 0, 'name' => '?'], 'query');               // map：按 key 读取，null 时用默认值兜底
  * container('#in.params', ['id' => 123]);                           // 预置路由参数
  * container('#in.content', ['application/xml' => fn($r) => ...]);  // 扩展 content-type 解析
  * ```
- * @param string|null|array $name   键名，null 时返回整个来源；数组时批量读取
- * @param string|array      $source 来源名称（query|cookie|file|params|header|input|body）或直接使用数组
+ * @param string|null|array $name   键名；null 返回整个来源；list 数组批量读取；map 数组批量读取+默认值兜底
+ * @param string|array      $source 来源名称（query|cookie|file|params|header|input|body），或直接提供数组作为来源
  * @return mixed 来源中指定键的值；整个来源；批量读取时返回关联数组；不存在返回 null
  */
 function from(string|null|array $name, string|array $source = 'body'): mixed{
-	if(is_array($source)){
-		return match (true) {
-			is_array($name) => array_fill_keys($name, null),
-			$name === null => $source,
-			default => $source[$name] ?? null,
-		};
-	}
-	if(is_array($name)){
-		$result = [];
-		foreach($name as $key){
-			$result[$key] = from($key, $source);
-		}
-		return $result;
-	}
 	static $getInput = function(){
 		$result = container('#mode:cli')
 			? [
@@ -61,12 +48,19 @@ function from(string|null|array $name, string|array $source = 'body'): mixed{
 	static $getHeaders = function(){
 		$headers = null;
 		if(function_exists('getallheaders')){
-			$_headers = getallheaders();
-			foreach($_headers as $name => $value) $headers[strtolower($name)] = $value;
+			foreach(getallheaders() as $name => $value){
+				$name = strtolower($name);
+				foreach((array)$value as $v){
+					$headers[$name] = isset($headers[$name]) ? [...(array)$headers[$name], $v] : $v;
+				}
+			}
 		}
 		else{
 			foreach($_SERVER as $n => $v){
-				if(str_starts_with($n, 'HTTP_')) $headers[str_replace(' ', '-', strtolower(str_replace('_', ' ', substr($n, 5))))] = $v;
+				if(str_starts_with($n, 'HTTP_')){
+					$name = str_replace(' ', '-', strtolower(str_replace('_', ' ', substr($n, 5))));
+					$headers[$name] = isset($headers[$name]) ? [...(array)$headers[$name], $v] : $v;
+				}
 			}
 		}
 		container("#in.headers", $headers);
@@ -87,15 +81,21 @@ function from(string|null|array $name, string|array $source = 'body'): mixed{
 		container("#in.body", $body);
 		return $body;
 	};
-	$from = match ($source) {
-		'query' => $_GET,
-		'cookie' => $_COOKIE,
-		'file' => $_FILES,
-		'params' => container("#in.params") ?? from('params', 'input') ?? [],
-		'header' => container("#in.headers") ?? $getHeaders(),
-		'input' => container("#in.input") ?? $getInput(),
-		'body' => container("#in.body") ?? $getBody(),
-		default => [],
+	$from = is_array($source)
+		? $source
+		: match ($source) {
+			'query' => $_GET,
+			'cookie' => $_COOKIE,
+			'file' => $_FILES,
+			'params' => container("#in.params") ?? from('params', 'input') ?? [],
+			'header' => container("#in.headers") ?? $getHeaders(),
+			'input' => container("#in.input") ?? $getInput(),
+			'body' => container("#in.body") ?? $getBody(),
+			default => [],
+		};
+	return match (true) {
+		$name === null => $from,
+		is_array($name) => array_is_list($name) ? array_map(fn($k) => $from[$k] ?? null, array_combine($name, $name)) : array_merge($name, array_intersect_key($from, $name)),
+		default => $from[$name] ?? null,
 	};
-	return $name !== null ? ($from[$name] ?? null) : $from;
 }
