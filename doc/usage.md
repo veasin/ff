@@ -194,6 +194,86 @@ route(['admin/'=>[
 
 底层使用 `middleware()` 执行最终链，从左到右顺序调用。每个函数接收 `$next`，调之则继续，不调则阻断。
 
+#### 大型项目的路由组织
+
+随着项目变大，入口文件中的所有路由堆在一个数组里会难以维护。推荐的拆分方式：**按资源域把子路由拆到独立文件，主入口用 `require` 展开拼入树结构。**
+
+**控制器文件格式（推荐使用 `rest()`）：**
+
+```php
+// routes/user.php — 控制器文件
+return rest([
+    'list'    => fn($input) => [users()->list($input)],
+    'create'  => fn($input) => [users()->create($input)->save(), 201],
+    'get'     => fn($input) => [users()->findByID($input['id'])?->output()],
+    'update'  => fn($input) => [null, users()->findByID($input['id'])?->update($input)?->save() ? 204 : 404],
+    'replace' => fn($input) => [users()->replace($input['id'], $input)],
+    'delete'  => fn($input) => [null, users()->findByID($input['id'])?->delete() ? 204 : 404],
+], '{id}', [
+    'list'    => ['name' => 'query,str', 'email' => 'query,email'],
+    'create'  => ['name' => 'str', 'email' => 'email'],
+    'update'  => ['name' => 'str'],
+    'replace' => ['name' => 'str', 'email' => 'email'],
+]);
+```
+
+`rest()` 返回 assoc 数组（`'get:' => fn, 'post:' => fn, ...`），route() 将其视为子路由映射，自动拼入树结构：
+
+```php
+// entry.php
+route([
+    '*' => [fn($next) => cors($next), fn($next) => errorHandler($next)],
+
+    'api/' => [
+        fn($next) => auth($next),
+        'user/'    => require 'routes/user.php',       // 作为 user/ 的子路由
+        'article/' => require 'routes/article.php',
+    ],
+
+    'admin/' => [
+        fn($next) => auth($next),
+        fn($next) => role_check($next, 'admin'),
+        'user/'    => require 'routes/admin/user.php',
+        'setting/' => require 'routes/admin/setting.php',
+    ],
+]);
+```
+
+**不使用 `rest()` 时（直接写 route 键）：**
+
+```php
+// routes/user.php — 手动写 route 键
+return [
+    'get:'       => fn() => output(listUsers(input('page', 'query'))),
+    'post:'      => fn() => output(createUser(input('body')), 201),
+    'get:{id}'   => fn() => output(getUser(input('id', 'params', 'int'))),
+    'patch:{id}' => fn() => output(null, updateUser(input('id', 'params', 'int'), input('body')) ? 204 : 404),
+    'delete:{id}'=> fn() => output(null, deleteUser(input('id', 'params', 'int')) ? 204 : 404),
+];
+```
+
+**spread 展平到当前层：**
+
+需要把多个文件的路由合并到同一层级时使用 `...require`：
+
+```php
+route([
+    'api/' => [
+        fn($next) => auth($next),
+        ...require 'routes/user.php',     // 展平到 api/ 下，不额外加前缀
+        ...require 'routes/article.php',
+    ],
+]);
+```
+
+**推荐理由：**
+
+- 每个资源域一个文件，内聚（handler + filter rules + rest 编排在同一文件）
+- 路由树的结构保留在入口，`require` 引入的分支随树结构自然嵌套
+- 没有额外加载逻辑——没有路由扫描、没有自动发现、没有加载器
+- 子路由文件可独立修改，不牵涉入口路由结构
+- 文件名即域，路径即层级，天然导航（`routes/admin/user.php`）
+
 ---
 
 ### from() 和 filter()
