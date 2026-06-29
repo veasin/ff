@@ -149,7 +149,7 @@ container('#env', __DIR__ . '/.env');
 ```php
 // ✅ 推荐：一次性数组 — API 端点组
 route(['api/'=>[
-    fn($next) => auth($next),                // before：所有端点先过鉴权
+    fn($next) => basic($next),                // before：所有端点先过鉴权
     'post:login'   => fn($next) => output(login(input('name,pass', 'body'))),  // login 跳过 rate_limit
     fn($next) => rate_limit($next),           // login 之后的端点需要限流
     'post:data'    => fn($next) => output(create(input('content', 'body'))),
@@ -172,7 +172,7 @@ route(['api/'=>[
 
 ```php
 route(['admin/'=>[
-    fn($next) => auth($next),                // 外层 before：后台所有路由需鉴权
+    fn($next) => basic($next),                // 外层 before：后台所有路由需鉴权
     'post:login' => fn($next) => output(login(...)),   // login 只过 auth
     'manage/' => [                            // 内层组
         fn($next) => role_check($next, 'admin'),       // 内层 before：manage 下需 admin 角色
@@ -225,13 +225,13 @@ route([
     '*' => [fn($next) => cors($next), fn($next) => errorHandler($next)],
 
     'api/' => [
-        fn($next) => auth($next),
+        fn($next) => basic($next),
         'user/'    => require 'routes/user.php',       // 作为 user/ 的子路由
         'article/' => require 'routes/article.php',
     ],
 
     'admin/' => [
-        fn($next) => auth($next),
+        fn($next) => basic($next),
         fn($next) => role_check($next, 'admin'),
         'user/'    => require 'routes/admin/user.php',
         'setting/' => require 'routes/admin/setting.php',
@@ -259,7 +259,7 @@ return [
 ```php
 route([
     'api/' => [
-        fn($next) => auth($next),
+        fn($next) => basic($next),
         ...require 'routes/user.php',     // 展平到 api/ 下，不额外加前缀
         ...require 'routes/article.php',
     ],
@@ -404,7 +404,7 @@ $msg = i18n('welcome_msg', ['name' => '张三']);
 
 ```php
 // 组合预置中间件
-middleware(cors(), auth(), rate(), $handler);
+middleware(cors(), basic(), rate(), $handler);
 
 // 自定义中间件 — 认证失败返回 401，不继续
 fn ($next) => container('#mw:auth:user')

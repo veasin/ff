@@ -4,18 +4,18 @@
 所有预制中间件返回 `callable`，直接传入 `middleware()` 或 `hump()` 使用：
 
 ```php
-middleware(cors(), auth(), log(), $handler);
+middleware(cors(), basic(), log(), $handler);
 ```
 
 **认证相关**
 
-## auth(prefix, realm) — HTTP Basic 认证
+## basic(prefix, realm) — HTTP Basic 认证
 
-旧版 Basic 认证。从 `Authorization: Basic` 头提取用户名密码，调用验证器（验证器返回 bool）。
+从 `Authorization: Basic` 头提取用户名密码，调用验证器。验证器返回值直接存入 user（可返回用户对象而非 `true`），支持密码含冒号。
 
 ```php
-container('#mw:auth:validators', [fn($user, $pass) => true]);//设置验证器
-middleware(auth(), $handler);//使用中间件
+container('#mw:auth:validators', [fn($user, $pass) => $user]);//设置验证器
+middleware(basic(), $handler);//使用中间件
 container('#mw:auth:user');//获取认证用户
 ```
 
@@ -24,22 +24,8 @@ container('#mw:auth:user');//获取认证用户
 - **`$realm`**: `?string` 默认 `null` WWW-Authenticate realm，null 时使用 i18n 翻译
 
 容器配置：
-- **`{prefix}:validators`**: `array` - 验证器数组，接收 `($user, $pass)` 返回 bool
+- **`{prefix}:validators`**: `array` - 验证器数组，接收 `($user, $pass)` 返回用户信息
 - **`{prefix}:user`**: `mixed` - 认证通过后写入用户信息
-
----
-
-## basic(prefix, realm) — HTTP Basic 认证（推荐）
-
-新版 Basic 认证。验证器返回值直接存入 user（可返回用户对象而非 `true`）。
-
-```php
-container('#mw:auth:validators', [fn($user, $pass) => $user]);//设置验证器
-middleware(basic(), $handler);//使用中间件
-container('#mw:auth:user');//获取认证用户
-```
-
-参数与容器键同 `auth()`。
 
 ---
 

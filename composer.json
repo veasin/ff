@@ -50,7 +50,6 @@
       "src/http/curl.php",
       "src/http/stream.php",
       "src/log.php",
-      "src/middleware/prefab/auth.php",
       "src/middleware/prefab/auth/basic.php",
       "src/middleware/prefab/auth/token.php",
       "src/middleware/prefab/auth/jwt.php",

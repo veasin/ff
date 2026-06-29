@@ -87,10 +87,10 @@ namespace ff;
  * ```
  * route([
  *     'get:/list' => fn($next) => ...,       // 普通路由
- *     fn($next) => auth($next),              // 等效 '*' => fn($next) => auth($next)
+ *     fn($next) => basic($next),              // 等效 '*' => fn($next) => basic($next)
  *     'post:/create' => fn($next) => ...,
  * ]);
- * // → auth 包裹其后所有匹配的路由
+ * // → basic 包裹其后所有匹配的路由
  * ```
  * 多条路由匹配时，内部使用 middleware() 执行 handler，* 通配符支持阻断：
  * ```

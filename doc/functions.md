@@ -305,7 +305,7 @@ route(['get:/a/'=>['b/'=>['c/'=>['d'=>fn($next)=>...]]]]);
 
 // 嵌套 + 智能包裹（外层前置/后置向内透传）
 route(['get:/level1/'=>[
-    fn($next) => auth($next),          // 外层前置
+    fn($next) => basic($next),          // 外层前置
     'level2/' => [                     // 子路由 => 嵌套
         'deep' => fn($next) => output(...),
     ],
@@ -436,7 +436,7 @@ route([
 洋葱模型中间件执行器，支持阻断（不调 `$next` 则终止）。参数可以是闭包、文件路径或其他值。
 
 ```php
-middleware(cors(), auth(), $handler);//执行中间件列表
+middleware(cors(), basic(), $handler);//执行中间件列表
 middleware(fn($next) => $next('value'));//闭包需接收 $next 并调用
 middleware('/path/to/file.php', $handler);//文件路径，通过 $next 变量调用下一层
 middleware('fallback');//非可调用值作为初始值透传
@@ -454,7 +454,7 @@ middleware('fallback');//非可调用值作为初始值透传
 洋葱模型变体，支持链式调用但不支持阻断。不调 `$next` 也会自动继续执行，并将当前返回值传给下一个。
 
 ```php
-hump(cors(), auth(), $handler);//执行中间件列表
+hump(cors(), basic(), $handler);//执行中间件列表
 hump(fn($next) => $next('value'));//不调 $next 自动继续，返回值传给下一层
 hump('/path/to/file.php', $handler);//文件路径
 ```

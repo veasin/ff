@@ -13,8 +13,8 @@ namespace ff;
  * - 返回值取自最后一个执行的中间件的返回值（若无显式 return 则返回 null）。
  * - 允许中间件多次调用 $next，但第一次调用后后续调用将直接返回第一次的结果（防止重复执行）。
  * ```
- * middleware(cors(), auth(), $handler);//多个中间件 + 处理器
- * middleware(auth(), $handler);//单个中间件 + 处理器
+ * middleware(cors(), basic(), $handler);//多个中间件 + 处理器
+ * middleware(basic(), $handler);//单个中间件 + 处理器
  * middleware('/path/to/file.php');//文件路径
  * middleware('hello', fn($next, ...$args) => strtoupper($next(...$args)));//带初始值
  * ```
