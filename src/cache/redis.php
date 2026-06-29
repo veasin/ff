@@ -54,7 +54,7 @@ function redis(string|array|null $key = null, mixed $value = null, string|int|ar
 	static $conn = null;
 	static $failed = false;
 	if($conn === null && !$failed){
-		$config = container('config.redis') ?: ['host' => '127.0.0.1', 'port' => 6379];
+		$config = container('cache.redis') ?: ['host' => '127.0.0.1', 'port' => 6379];
 		try{
 			$c = new \Redis();
 			$c->connect($config['host'], $config['port'] ?? 6379);

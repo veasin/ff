@@ -1,7 +1,7 @@
 <?php
 require __DIR__ . '/../../vendor/autoload.php';
 
-use function ff\{container, route, rest, output, test};
+use function ff\{container, route, route\rest, test};
 
 test('rest - list 处理器带规则', function(){
 	container(null);

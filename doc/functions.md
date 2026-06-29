@@ -548,7 +548,7 @@ cache(redis('key', 'fallback', middleware: 60), fn($next) => null);
 ```
 
 容器配置：
-- **`config.redis`**: `array` - Redis 连接配置，支持 `host`、`port`、`password`、`database`
+- **`cache.redis`**: `array` - Redis 连接配置，支持 `host`、`port`、`password`、`database`
 - **`#cache.redis.{name}`**: `array` - 命名配置，支持 `ttl`、`prefix`
 
 ---
