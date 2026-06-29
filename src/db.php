@@ -23,7 +23,7 @@ namespace ff;
 function db(object|string $sql, array|string|int|callable|bool|null $params = [], string|int|callable|bool|null $mode = null, ?string $configName = null): mixed{
 	static $connections = [];
 	if(!is_array($params)) [$configName, $mode, $params] = [$mode, $params, []];
-	if(is_object($sql) && (get_class($sql) === 'nx\helpers\sql' || is_a($sql, 'nx\helpers\sql', true))) [$sql, $params] = [(string)$sql, $sql->params];
+	if(is_object($sql) && (get_class($sql) === 'ff\helpers\sql' || is_a($sql, 'ff\helpers\sql', true))) [$sql, $params] = [(string)$sql, $sql->params];
 	$configName = $configName ?? 'default';
 	if(!isset($connections[$configName])){
 		$config = container("db.{$configName}") ?? null;

@@ -590,7 +590,7 @@ container('db.default', ['dsn' => 'mysql:host=localhost;dbname=test', 'username'
 $user = db('SELECT * FROM users WHERE id = ?', [1], 'row', 'default');//使用命名配置
 ```
 
-配合 [nx-sql](https://github.com/veasin/nx-sql) 使用：
+配合 [ff-sql](https://github.com/veasin/ff-sql) 使用：
 ```php
 $id = db(sql::table('users')->insert(['name' => 'John']), 'id');//插入
 $user = db(sql::table('users')->where(['id' => 1])->select(), 'row');//查询
