@@ -1,7 +1,7 @@
 <?php
 require __DIR__ . '/../vendor/autoload.php';
 
-use function nx\{container, from, test};
+use function ff\{container, from, test};
 
 container("#in.input", [
 	'method' => 'get',

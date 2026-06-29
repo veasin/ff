@@ -1,6 +1,6 @@
 <?php
-namespace nx\middleware\prefab;
-use function nx\{from, output};
+namespace ff\middleware\prefab;
+use function ff\{from, output};
 
 /**
  * 统一 JSON 响应格式中间件

@@ -1,7 +1,7 @@
 <?php
-namespace nx\middleware\prefab;
+namespace ff\middleware\prefab;
 
-use function nx\{container, i18n, output};
+use function ff\{container, i18n, output};
 
 /**
  * 统一异常处理中间件

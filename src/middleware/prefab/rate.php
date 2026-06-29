@@ -1,6 +1,6 @@
 <?php
-namespace nx\middleware\prefab;
-use function nx\{from, output, container, i18n};
+namespace ff\middleware\prefab;
+use function ff\{from, output, container, i18n};
 
 /**
  * 接口限流中间件

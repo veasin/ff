@@ -1,7 +1,7 @@
 <?php
 include __DIR__ . "/../vendor/autoload.php";
 
-use function nx\{container, test};
+use function ff\{container, test};
 
 // 测试 1: 基本设置和获取
 container('test.key', 'value');

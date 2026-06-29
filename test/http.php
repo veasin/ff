@@ -1,7 +1,7 @@
 <?php
 include __DIR__ . "/../vendor/autoload.php";
 
-use function nx\{container, http, test};
+use function ff\{container, http, test};
 
 // ── Mock driver（模拟 server.php 行为，无网络开销）──
 $port = 9899;

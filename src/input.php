@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-namespace nx;
+namespace ff;
 /**
  * 获取并验证输入数据。input() = from() + filter()
  * ```

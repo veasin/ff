@@ -1,8 +1,8 @@
 <?php
 include __DIR__ . "/../vendor/autoload.php";
 
-use function nx\{cache, container, test};
-use function nx\cache\redis;
+use function ff\{cache, container, test};
+use function ff\cache\redis;
 
 // Redis 中间件工厂测试
 // 无 Redis 服务器时，中间件自动回退到 $next() 进行计算

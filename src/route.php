@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-namespace nx;
+namespace ff;
 /**
  * 路由匹配，支持 CLI 和 Web 两种模式。
  * 核心规则：未显式指定的部分从父级继承；顶级路由的隐式父级是 ['*', '/']

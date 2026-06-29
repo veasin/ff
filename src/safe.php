@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-namespace nx;
+namespace ff;
 /**
  * 安全调用：封装 try/catch，失败返回 null。
  * 可通过容器注册异常处理器：

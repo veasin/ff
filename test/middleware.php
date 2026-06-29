@@ -2,7 +2,7 @@
 // 测试文件：test_middleware.php
 include __DIR__ . "/../vendor/autoload.php";
 
-use function nx\{middleware, test};
+use function ff\{middleware, test};
 
 // ==================== 定义测试中间件 ====================
 $wrap = fn($next, ...$args) => '(' . $next(...$args) . ')';

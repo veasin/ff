@@ -1,7 +1,7 @@
 <?php
-namespace nx\middleware\prefab;
+namespace ff\middleware\prefab;
 
-use function nx\{container, from, output, i18n};
+use function ff\{container, from, output, i18n};
 
 /**
  * JWT 认证中间件

@@ -1,7 +1,7 @@
 <?php
 include __DIR__ . "/../vendor/autoload.php";
 
-use function nx\{filter, test};
+use function ff\{filter, test};
 
 // 测试 int 类型转换
 test('int 转换', filter('123', 'int'), 123);

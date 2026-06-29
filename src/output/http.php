@@ -1,8 +1,8 @@
 <?php
 declare(strict_types=1);
-namespace nx\output;
+namespace ff\output;
 
-use function nx\{container, from};
+use function ff\{container, from};
 
 /**
  * @param array $response

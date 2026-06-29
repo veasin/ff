@@ -2,8 +2,8 @@
 // log.php 测试
 include __DIR__ . "/../../../vendor/autoload.php";
 
-use function nx\{middleware, test, container, log as nxlog};
-use function nx\middleware\prefab\log as mw_log;
+use function ff\{middleware, test, container, log as flog};
+use function ff\middleware\prefab\log as mw_log;
 
 $logged = [];
 container('#log', function($level, $message, $context) use (&$logged){

@@ -1,9 +1,9 @@
 <?php
 declare(strict_types=1);
-namespace nx;
+namespace ff;
 
-use nx\output\status;
-use function nx\output\{type\file, type\json, type\view, http};
+use ff\output\status;
+use function ff\output\{type\file, type\json, type\view, http};
 
 /**
  * 输出数据，支持多种格式和模板。

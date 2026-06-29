@@ -1,8 +1,8 @@
 <?php
 include __DIR__ . "/../../vendor/autoload.php";
 
-use function nx\{container, test};
-use function nx\cache\redis;
+use function ff\{container, test};
+use function ff\cache\redis;
 
 // Redis CRUD 驱动需运行中的 Redis 服务器才能验证完整读写。
 // 无服务器时驱动优雅降级，所有操作返回 null。

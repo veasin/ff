@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-namespace nx\output;
+namespace ff\output;
 enum status: int{
 	case Ok = 200;
 	case Created = 201;

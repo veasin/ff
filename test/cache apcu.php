@@ -1,8 +1,8 @@
 <?php
 include __DIR__ . "/../vendor/autoload.php";
 
-use function nx\{cache, test};
-use function nx\cache\apcu;
+use function ff\{cache, test};
+use function ff\cache\apcu;
 
 $mock = [];
 if(!function_exists('apcu_fetch')){

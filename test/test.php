@@ -1,7 +1,7 @@
 <?php
 include __DIR__ . "/../vendor/autoload.php";
 
-use function nx\test;
+use function ff\test;
 
 // 简单比较 - 通过
 test('数字比较', 5, 5);

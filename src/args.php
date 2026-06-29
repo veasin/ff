@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-namespace nx;
+namespace ff;
 /**
  * 解析命令行参数
  * 该函数用于解析命令行传入的参数，支持多种格式的选项和参数。

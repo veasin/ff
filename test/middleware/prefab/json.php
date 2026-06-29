@@ -2,8 +2,8 @@
 // json.php 测试
 include __DIR__ . "/../../../vendor/autoload.php";
 
-use function nx\{middleware, test, container};
-use function nx\middleware\prefab\json;
+use function ff\{middleware, test, container};
+use function ff\middleware\prefab\json;
 
 // 测试用例
 test('json: null返回null', function() {

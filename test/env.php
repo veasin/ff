@@ -1,8 +1,8 @@
 <?php
 include __DIR__ . "/../vendor/autoload.php";
 
-use function nx\env;
-use function nx\test;
+use function ff\env;
+use function ff\test;
 
 // 准备 .env 文件
 file_put_contents(__DIR__ . '/../.env', <<<EOT

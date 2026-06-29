@@ -1,7 +1,7 @@
 <?php
 require __DIR__ . '/../vendor/autoload.php';
 
-use function nx\{container, input, route, test};
+use function ff\{container, input, route, test};
 
 test('路由 - 基础匹配', function(){
 	container("#in.input", ['method' => 'get', 'uri' => '/users/123', 'params' => null]);

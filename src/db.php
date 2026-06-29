@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-namespace nx;
+namespace ff;
 /**
  * 数据库操作函数，支持多种查询模式和事务。
  * ```

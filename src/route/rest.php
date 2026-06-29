@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-namespace nx;
+namespace ff;
 /**
  * RESTful 控制器编排。基于 route() 的子路由映射，接收 handlers 映射自动展开为标准 route() 键。
  * ```

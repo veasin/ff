@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-namespace nx;
+namespace ff;
 /**
  * 钩子系统，支持注册/触发分离，与容器集成。
  * 0 参触发：hook() 触发默认序列

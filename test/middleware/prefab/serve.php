@@ -2,8 +2,8 @@
 // serve.php 测试
 include __DIR__ . "/../../../vendor/autoload.php";
 
-use function nx\{middleware, test, container, from};
-use function nx\middleware\prefab\serve;
+use function ff\{middleware, test, container, from};
+use function ff\middleware\prefab\serve;
 
 // 初始化测试环境
 $testDir = __DIR__ . '/_test_static';

@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-namespace nx;
+namespace ff;
 /**
  * 验证并转换数据。按顺序应用规则，任意验证失败返回 null。
  * 内置规则: int|str|email|url|number|json|bool，通过 container('#filter') 扩展自定义规则。

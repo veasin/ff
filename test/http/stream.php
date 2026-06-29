@@ -1,6 +1,6 @@
 <?php
 include __DIR__ . "/../../vendor/autoload.php";
-use function nx\{test};
+use function ff\{test};
 
 $port = 9897;
 $null = PHP_OS_FAMILY === 'Windows' ? 'NUL' : '/dev/null';
@@ -19,19 +19,19 @@ for($i = 0; $i < 20; $i++){
 }
 
 test('Stream 驱动 GET', function() use($base){
-	$r = \nx\http\stream('GET', "$base/json", null, [], []);
+	$r = \ff\http\stream('GET', "$base/json", null, [], []);
 	return $r !== null && $r['code'] === 200 && str_contains($r['body'], '"ok":true');
 }, true);
 test('Stream 驱动 POST', function() use($base){
-	$r = \nx\http\stream('POST', "$base/echo", '{"x":1}', ['Content-Type: application/json'], []);
+	$r = \ff\http\stream('POST', "$base/echo", '{"x":1}', ['Content-Type: application/json'], []);
 	return $r !== null && $r['code'] === 200 && str_contains($r['body'], '\\"x\\":1');
 }, true);
 test('Stream 驱动 原始 headers', function() use($base){
-	$r = \nx\http\stream('GET', "$base/json", null, [], []);
+	$r = \ff\http\stream('GET', "$base/json", null, [], []);
 	return $r !== null && is_array($r['headers']) && count($r['headers']) > 0;
 }, true);
 test('Stream 驱动 连接失败', function(){
-	$r = \nx\http\stream('GET', 'http://127.0.0.1:18766/nonexistent', null, [], ['timeout' => 1]);
+	$r = \ff\http\stream('GET', 'http://127.0.0.1:18766/nonexistent', null, [], ['timeout' => 1]);
 	return $r === null;
 }, true);
 

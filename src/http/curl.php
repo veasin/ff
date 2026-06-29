@@ -1,13 +1,13 @@
 <?php
 declare(strict_types=1);
-namespace nx\http;
+namespace ff\http;
 /**
  * cURL 驱动，传输层纯函数。被 http() 自动调用。
  * @internal
  */
 function curl(string $method, string $url, ?string $body, array $headers, array $config): ?array{
 	$method = strtoupper($method);
-	$config = array_merge(\nx\container('#http.curl') ?? [], $config);
+	$config = array_merge(\ff\container('#http.curl') ?? [], $config);
 	$ch = curl_init();
 	if($ch === false) return null;
 	curl_setopt_array($ch, [

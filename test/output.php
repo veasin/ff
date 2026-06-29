@@ -1,8 +1,8 @@
 <?php
 include __DIR__ . "/../vendor/autoload.php";
 
-use nx\output\status;
-use function nx\{container, output, test};
+use ff\output\status;
+use function ff\{container, output, test};
 
 output(['a' => 1, 'b' => 2], ['type' => 'json']);
 $r = container('#out.response');

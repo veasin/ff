@@ -1,8 +1,8 @@
 <?php
 include __DIR__ . "/../../../vendor/autoload.php";
 
-use function nx\test;
-use function nx\output\type\view;
+use function ff\test;
+use function ff\output\type\view;
 
 $viewFile = __DIR__ . '/view_test.phtml';
 file_put_contents($viewFile, '<?php echo $name; ?>');

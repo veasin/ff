@@ -1,8 +1,8 @@
 <?php
 include __DIR__ . "/../../vendor/autoload.php";
 
-use function nx\{container, test};
-use function nx\output\http;
+use function ff\{container, test};
+use function ff\output\http;
 
 container('#in.input', ['protocol' => 'HTTP/1.1']);
 

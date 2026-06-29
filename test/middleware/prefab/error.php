@@ -1,8 +1,8 @@
 <?php
 include __DIR__ . "/../../../vendor/autoload.php";
 
-use function nx\{middleware, test, container};
-use function nx\middleware\prefab\error;
+use function ff\{middleware, test, container};
+use function ff\middleware\prefab\error;
 
 test('error: 正常执行返回结果', function() {
     return middleware(error(), 'ok');

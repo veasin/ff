@@ -1,6 +1,6 @@
 <?php
-namespace nx\middleware\prefab;
-use function nx\{from, container, output};
+namespace ff\middleware\prefab;
+use function ff\{from, container, output};
 
 /**
  * Gzip 响应压缩中间件

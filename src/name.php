@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-namespace nx;
+namespace ff;
 /**
  * 命名配置和管理，统一项目中所有类型的命名规则。通过 container('#name') 配置命名模板。
  * ```

@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-namespace nx;
+namespace ff;
 /**
  * 日志函数，PSR-3 风格输出。通过容器注入 PSR Logger 或闭包定制输出行为。
  * ```

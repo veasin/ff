@@ -1,7 +1,7 @@
 <?php
 include __DIR__ . "/../vendor/autoload.php";
 
-use function nx\{container, name, test};
+use function ff\{container, name, test};
 
 // 设置配置
 container('#name', [

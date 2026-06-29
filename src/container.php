@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-namespace nx;
+namespace ff;
 /**
  * 容器方法，支持双生命周期（持久/请求级）与延迟构建
  * 基本操作：

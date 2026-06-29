@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-namespace nx;
+namespace ff;
 /**
  * 多语言翻译函数，支持占位符替换和强制语言。
  * ```

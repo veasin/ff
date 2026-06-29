@@ -1,7 +1,7 @@
 <?php
-namespace nx\middleware\prefab;
+namespace ff\middleware\prefab;
 
-use function nx\{from, output};
+use function ff\{from, output};
 
 /**
  * CORS 跨域请求中间件

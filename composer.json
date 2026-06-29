@@ -1,5 +1,5 @@
 {
-  "name":"veasin/nx-tiny",
+  "name":"veasin/ff",
   "description":"A minimalist, functional PHP framework. Focus on declarative config, tail-call optimization, and clear domain modeling.",
   "type":"library",
   "license":"LGPL-3.0-or-later",
@@ -20,7 +20,7 @@
   },
   "autoload":{
     "psr-4":{
-      "nx\\":"src/"
+      "ff\\":"src/"
     },
     "files":[
       "src/hook.php",

@@ -1,9 +1,9 @@
 <?php
 include __DIR__ . "/../vendor/autoload.php";
 
-use function nx\safe;
-use function nx\container;
-use function nx\test;
+use function ff\safe;
+use function ff\container;
+use function ff\test;
 
 test('成功返回结果', safe(fn() => 42), 42);
 test('异常返回 null', safe(fn() => throw new \Exception('fail')), null);

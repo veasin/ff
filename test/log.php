@@ -1,7 +1,7 @@
 <?php
 include __DIR__ . "/../vendor/autoload.php";
 
-use function nx\{container, log, test};
+use function ff\{container, log, test};
 
 container(null);
 class TestLogger{

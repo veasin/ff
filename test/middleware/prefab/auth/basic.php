@@ -2,8 +2,8 @@
 // basic.php 测试
 include __DIR__ . "/../../../../vendor/autoload.php";
 
-use function nx\{container, middleware, test};
-use function nx\middleware\prefab\basic;
+use function ff\{container, middleware, test};
+use function ff\middleware\prefab\basic;
 
 test('auth_basic: 未认证返回401',
 	function(){

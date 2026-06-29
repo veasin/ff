@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-namespace nx;
+namespace ff;
 /**
  * 轻量级测试函数，支持直接比较、闭包断言和异常断言。
  * 0 参触发：test() 执行所有测试并输出

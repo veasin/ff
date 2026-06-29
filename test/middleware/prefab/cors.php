@@ -2,8 +2,8 @@
 // cors.php 测试
 include __DIR__ . "/../../../vendor/autoload.php";
 
-use function nx\{container, middleware, test};
-use function nx\middleware\prefab\cors;
+use function ff\{container, middleware, test};
+use function ff\middleware\prefab\cors;
 
 // 测试用例
 test('cors: 设置默认跨域头',

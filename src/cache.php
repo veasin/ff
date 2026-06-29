@@ -1,8 +1,8 @@
 <?php
 declare(strict_types=1);
-namespace nx;
+namespace ff;
 
-use function nx\middleware;
+use function ff\middleware;
 
 /**
  * 多级缓存函数

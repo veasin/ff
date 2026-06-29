@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-namespace nx;
+namespace ff;
 /**
  * HTTP 请求函数，一函数多用。支持 encode/decode 控制请求体编码和响应解码。
  * 无空格 'url' → 默认 GET；'METHOD url' → 指定方法。

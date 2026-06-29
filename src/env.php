@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-namespace nx;
+namespace ff;
 /**
  * 获取环境变量值，支持系统环境变量、$_ENV、.env 文件三种来源。
  * 自动类型转换：'true'/'false'/'null'/'empty' 转为对应类型。

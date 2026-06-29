@@ -1,7 +1,7 @@
 <?php
-namespace nx\middleware\prefab;
+namespace ff\middleware\prefab;
 
-use function nx\{container, from, output};
+use function ff\{container, from, output};
 
 /**
  * 静态文件服务中间件。根据 URI 在指定目录查找静态文件，自动设置 MIME 类型，支持多种缓存策略。目录自动追加 index.html。扩展 MIME 类型通过 container('#static:mimes') 配置。

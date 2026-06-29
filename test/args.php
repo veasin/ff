@@ -1,7 +1,7 @@
 <?php
 include __DIR__ . "/../vendor/autoload.php";
 
-use function nx\{args, test};
+use function ff\{args, test};
 
 //echo "========== args 函数测试开始 ==========\n\n";
 // ==================== 1. 基础边界测试 ====================

@@ -2,8 +2,8 @@
 // gzip.php 测试
 include __DIR__ . "/../../../vendor/autoload.php";
 
-use function nx\{middleware, test, container};
-use function nx\middleware\prefab\gzip;
+use function ff\{middleware, test, container};
+use function ff\middleware\prefab\gzip;
 
 // 测试用例
 test('gzip: 不压缩空结果', function() {

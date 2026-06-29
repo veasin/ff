@@ -2,8 +2,8 @@
 // rate.php 测试
 include __DIR__ . "/../../../vendor/autoload.php";
 
-use function nx\{middleware, test, container, from};
-use function nx\middleware\prefab\rate;
+use function ff\{middleware, test, container, from};
+use function ff\middleware\prefab\rate;
 
 test('rate: 允许通过请求',
 	function(){

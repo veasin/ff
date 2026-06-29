@@ -1,8 +1,8 @@
 <?php
 declare(strict_types=1);
-namespace nx\http;
+namespace ff\http;
 
-use function nx\container;
+use function ff\container;
 
 /**
  * PHP stream 驱动，传输层纯函数。被 http() 自动调用。

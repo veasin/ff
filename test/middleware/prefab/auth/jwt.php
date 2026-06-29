@@ -2,8 +2,8 @@
 // jwt.php 测试
 include __DIR__ . "/../../../../vendor/autoload.php";
 
-use function nx\{container, middleware, test};
-use function nx\middleware\prefab\jwt;
+use function ff\{container, middleware, test};
+use function ff\middleware\prefab\jwt;
 
 function createJwt(string $secret, array $payload, string $algo = 'HS256'): string{
 	$header = ['typ' => 'JWT', 'alg' => $algo];

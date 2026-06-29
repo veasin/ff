@@ -1,10 +1,10 @@
 <?php
 include __DIR__ . "/../vendor/autoload.php";
 
-use function nx\{container, db, test};
+use function ff\{container, db, test};
 
 // ========== 基础功能测试 ==========
-test('db函数存在', fn() => function_exists('nx\db'), true);
+test('db函数存在', fn() => function_exists('ff\db'), true);
 // ========== 配置管理测试 ==========
 test('配置缺失-返回null', function(){
 	// 使用一个不存在的配置名

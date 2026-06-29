@@ -2,8 +2,8 @@
 // csrf.php 测试
 include __DIR__ . "/../../../vendor/autoload.php";
 
-use function nx\{container, middleware, test};
-use function nx\middleware\prefab\csrf;
+use function ff\{container, middleware, test};
+use function ff\middleware\prefab\csrf;
 
 // 测试用例
 test('csrf: 生成 token',

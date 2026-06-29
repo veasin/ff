@@ -2,8 +2,8 @@
 // apikey.php 测试
 include __DIR__ . "/../../../../vendor/autoload.php";
 
-use function nx\{container, middleware, test};
-use function nx\middleware\prefab\apikey;
+use function ff\{container, middleware, test};
+use function ff\middleware\prefab\apikey;
 
 test('apikey: 无 apiKey 返回401',
 	function(){

@@ -1,7 +1,7 @@
 <?php
 include __DIR__ . "/../vendor/autoload.php";
 
-use function nx\{container, i18n, test};
+use function ff\{container, i18n, test};
 
 container(null);
 // ---- core 默认翻译 ----

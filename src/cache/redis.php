@@ -1,8 +1,8 @@
 <?php
 declare(strict_types=1);
-namespace nx\cache;
+namespace ff\cache;
 
-use function nx\container;
+use function ff\container;
 
 /**
  * Redis 缓存驱动

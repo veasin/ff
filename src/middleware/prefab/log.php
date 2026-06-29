@@ -1,6 +1,6 @@
 <?php
-namespace nx\middleware\prefab;
-use function nx\{from, container, log as nxlog};
+namespace ff\middleware\prefab;
+use function ff\{from, container, log as flog};
 
 /**
  * 请求/响应日志中间件
@@ -32,7 +32,7 @@ function log(string $level = 'info'): callable{
 		$duration = round((microtime(true) - $start) * 1000, 2);
 		$memory = round((memory_get_usage() - $memStart) / 1024, 2);
 		$status = container('#out.response:code') ?? 200;
-		nxlog([
+		flog([
 			'method' => $request['method'],
 			'uri' => $request['uri'],
 			'status' => $status,

@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-namespace nx;
+namespace ff;
 /**
  * 从指定来源获取原始值。input() 内部调用此函数，也可独立使用获取未经验证的原始数据。
  * 来源说明：

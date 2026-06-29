@@ -1,6 +1,6 @@
 <?php
 include __DIR__ . "/../../vendor/autoload.php";
-use function nx\{test};
+use function ff\{test};
 
 $port = 9896;
 $null = PHP_OS_FAMILY === 'Windows' ? 'NUL' : '/dev/null';
@@ -20,19 +20,19 @@ for($i = 0; $i < 20; $i++){
 
 if(extension_loaded('curl')){
 	test('cURL 驱动 GET', function() use($base){
-		$r = \nx\http\curl('GET', "$base/json", null, [], []);
+		$r = \ff\http\curl('GET', "$base/json", null, [], []);
 		return $r !== null && $r['code'] === 200 && str_contains($r['body'], '"ok":true');
 	}, true);
 	test('cURL 驱动 POST', function() use($base){
-		$r = \nx\http\curl('POST', "$base/echo", '{"x":1}', ['Content-Type: application/json'], []);
+		$r = \ff\http\curl('POST', "$base/echo", '{"x":1}', ['Content-Type: application/json'], []);
 		return $r !== null && $r['code'] === 200 && str_contains($r['body'], '\\"x\\":1');
 	}, true);
 	test('cURL 驱动 原始 headers', function() use($base){
-		$r = \nx\http\curl('GET', "$base/json", null, [], []);
+		$r = \ff\http\curl('GET', "$base/json", null, [], []);
 		return $r !== null && is_array($r['headers']) && count($r['headers']) > 0;
 	}, true);
 	test('cURL 驱动 连接失败', function(){
-		$r = \nx\http\curl('GET', 'http://127.0.0.1:18765/nonexistent', null, [], ['timeout' => 1]);
+		$r = \ff\http\curl('GET', 'http://127.0.0.1:18765/nonexistent', null, [], ['timeout' => 1]);
 		return $r === null;
 	}, true);
 }

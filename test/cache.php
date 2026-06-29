@@ -1,7 +1,7 @@
 <?php
 include __DIR__ . "/../vendor/autoload.php";
 
-use function nx\{cache, test};
+use function ff\{cache, test};
 
 test('无参返回 null', cache(), null);
 test('单个闭包直接返回', cache(fn($next) => 'value'), 'value');

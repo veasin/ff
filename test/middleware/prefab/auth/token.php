@@ -2,8 +2,8 @@
 // token.php 测试
 include __DIR__ . "/../../../../vendor/autoload.php";
 
-use function nx\{container, middleware, test};
-use function nx\middleware\prefab\token;
+use function ff\{container, middleware, test};
+use function ff\middleware\prefab\token;
 
 test('token: 无 token 返回401',
 	function(){

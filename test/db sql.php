@@ -1,7 +1,7 @@
 <?php
 include __DIR__ . "/../vendor/autoload.php";
 
-use function nx\{container, db, test};
+use function ff\{container, db, test};
 
 test('sql对象-类存在检查', fn() => class_exists('nx\helpers\sql'), true);
 test('sql对象-插入并查询', function(){

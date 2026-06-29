@@ -1,7 +1,7 @@
 <?php
 include __DIR__ . "/../vendor/autoload.php";
 
-use function nx\{hump, test};
+use function ff\{hump, test};
 
 // 定义测试中间件
 $wrapper = fn($next, ...$args) => '(' . $next(...$args) . ')';

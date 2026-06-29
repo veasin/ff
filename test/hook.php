@@ -1,7 +1,7 @@
 <?php
 include __DIR__ . "/../vendor/autoload.php";
 
-use function nx\{container, hook, test};
+use function ff\{container, hook, test};
 
 $called = [];
 $collect = function(string $name) use (&$called): callable{
