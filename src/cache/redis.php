@@ -74,7 +74,7 @@ function redis(string|array|null $key = null, mixed $value = null, string|int|ar
 			null === $key => $conn->flushAll(),
 			is_string($key) => ($v = $conn->get($prefix . $key)) !== false ? unserialize($v) : null,
 			array_is_list($key) => array_combine($key, array_map(fn($k) => ($v = $conn->get($prefix . $k)) !== false ? unserialize($v) : null, $key)),
-			default => (function() use ($conn, $key, $prefix) { foreach($key as $k => $v) $conn->set($prefix . $k, serialize($v)); return null; })(),
+			default => array_walk($key, fn($v, $k) => $conn->set($prefix . $k, serialize($v))) && null,
 		},
 		2 => null === $value ? $conn->del($prefix . $key) : $conn->set($prefix . $key, serialize($value)),
 		default => $conn->setex($prefix . $key, $set['ttl'] ?? 0, serialize($value)),

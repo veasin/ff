@@ -80,26 +80,28 @@ function container(array|string|null $key = null, mixed $value = null): mixed{
 		$execute = $key[-1] === '*';
 		return [substr($key, $persist ? 1 : 0, $execute ? -1 : null), $persist, $execute];
 	};
+	static $read = function(string $key) use ($get, $parseKey, &$core, &$persist, &$request){
+		[$k, $fromPersist, $execute] = $parseKey($key);
+		$val = $fromPersist ? ($get($persist, $k) ?? $get($core, $k)) : ($get($request, $k) ?? $get($persist, $k) ?? $get($core, $k));
+		return ($execute && $val instanceof \Closure) ? $val() : $val;
+	};
+	static $write = function(string $key, mixed $value) use ($parseKey, $set, &$persist, &$request){
+		[$k, $toPersist, $execute] = $parseKey($key);
+		if($execute) trigger_error("container write with * suffix has no effect: {$key}", E_USER_WARNING);
+		$toPersist ? $set($persist, $k, $value) : $set($request, $k, $value);
+		return null;
+	};
 	return match (func_num_args()) {
 		0 => array_merge($persist, $request),
 		1 => match (true) {
-			is_string($key) => (function() use ($key, $get, $parseKey, &$core, &$persist, &$request){
-				[$k, $fromPersist, $execute] = $parseKey($key);
-				$val = $fromPersist ? ($get($persist, $k) ?? $get($core, $k)) : ($get($request, $k) ?? $get($persist, $k) ?? $get($core, $k));
-				return ($execute && $val instanceof \Closure) ? $val() : $val;
-			})(),
+			is_string($key) => $read($key),
 			$key === null => ($request = []) ?: [],
 			is_array($key) && array_is_list($key) => array_map(fn($k) => container($k), $key),
 			is_array($key) => array_walk($key, fn($v, $k) => container($k, $v)) && null,
 			default => null,
 		},
 		2 => match (true) {
-			is_string($key) => (function() use ($key, $value, $parseKey, $set, &$persist, &$request){
-				[$k, $toPersist, $execute] = $parseKey($key);
-				if($execute) trigger_error("container write with * suffix has no effect: {$key}", E_USER_WARNING);
-				$toPersist ? $set($persist, $k, $value) : $set($request, $k, $value);
-				return null;
-			})(),
+			is_string($key) => $write($key, $value),
 			$key === null && ($value === true || $value === '^') => ($persist = []) ?: [],
 			is_array($key) => array_walk($key, fn($v, $k) => container((($value === true || $value === '^') && !str_starts_with($k, '^')) ? '^' . $k : $k, $v)) && null,
 			default => null,

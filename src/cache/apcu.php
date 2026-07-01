@@ -57,10 +57,7 @@ function apcu(string|array|null $key = null, mixed $value = null, string|int|arr
 			null === $key => \apcu_clear_cache(),
 			is_string($key) => ($v = \apcu_fetch($prefix . $key)) !== false ? $v : null,
 			array_is_list($key) => array_combine($key, array_map(fn($k) => ($v = \apcu_fetch($prefix . $k)) !== false ? $v : null, $key)),
-			default => (function() use ($key, $prefix){
-				foreach($key as $k => $v) \apcu_store($prefix . $k, $v);
-				return null;
-			})(),
+			default => array_walk($key, fn($v, $k) => \apcu_store($prefix . $k, $v)) && null,
 		},
 		2 => null === $value ? \apcu_delete($prefix . $key) : \apcu_store($prefix . $key, $value),
 		default => \apcu_store($prefix . $key, $value, $set['ttl'] ?? 0),
