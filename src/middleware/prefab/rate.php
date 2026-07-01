@@ -14,7 +14,7 @@ use function ff\cache\apcu;
  * ```
  * 存储方式:
  * - 默认使用 APCu: 通过框架 apcu() 函数
- * - 自定义存储: container('#rate:storage', fn($key, $value, $ttl) => ...)
+ * - 自定义存储: container('#mw/rate/storage', fn($key, $value, $ttl) => ...)
  *   fn($key)          — 读取
  *   fn($key, $timestamps, $ttl) — 写入
  *
@@ -28,7 +28,7 @@ function rate(int $maxRequests = 60, int $windowSeconds = 60, string $key = 'rat
 		$ip = $_SERVER['REMOTE_ADDR'] ?? from('remote_addr', 'input') ?? 'unknown';
 		$route = from('uri', 'input') ?? '';
 		$cacheKey = "$key:$ip:$route";
-		$storage = container('#rate:storage');
+		$storage = container('#mw/rate/storage');
 		$timestamps = $storage ? $storage($cacheKey) : null;
 		if($timestamps === null) $timestamps = apcu($cacheKey) ?? [];
 		$now = time();

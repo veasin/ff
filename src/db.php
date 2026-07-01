@@ -13,7 +13,7 @@ namespace ff;
  * db('BEGIN'); db('COMMIT'); db('ROLLBACK');                    // 事务
  * ```
  * 模式: row|list|value|column|pairs|group|id|count|ok|true|callable
- * 连接通过 container('db.{configName}') 配置，默认配置名 default
+ * 连接通过 container('#db.{configName}') 配置，默认配置名 default
  * @param object|string                       $sql        SQL 语句或 SQL helper 对象
  * @param array|string|int|callable|bool|null $params     参数数组；传入字符串/整数/可调用/bool/null 时作为 mode
  * @param string|int|callable|bool|null       $mode       操作模式；params 为数组时跳过此位的参数被视为 configName
@@ -26,7 +26,7 @@ function db(object|string $sql, array|string|int|callable|bool|null $params = []
 	if(is_object($sql) && (get_class($sql) === 'ff\helpers\sql' || is_a($sql, 'ff\helpers\sql', true))) [$sql, $params] = [(string)$sql, $sql->params];
 	$configName = $configName ?? 'default';
 	if(!isset($connections[$configName])){
-		$config = container("db.{$configName}") ?? null;
+		$config = container("#db.{$configName}") ?? null;
 		if(!is_array($config) || !isset($config['dsn'])) return null;
 		try{
 			$connections[$configName] = new \PDO($config['dsn'], $config['username'] ?? null, $config['password'] ?? null, ($config['options'] ?? []) + [

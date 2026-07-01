@@ -9,7 +9,7 @@ use function ff\container;
  * @internal
  */
 function stream(string $method, string $url, ?string $body, array $headers, array $config): ?array{
-	$config = array_merge(container('#http.stream') ?? [], $config);
+	$config = array_merge(container('#http/stream') ?? [], $config);
 	$http = [
 		'method' => strtoupper($method),
 		'header' => implode("\r\n", $headers),

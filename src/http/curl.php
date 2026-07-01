@@ -7,7 +7,7 @@ namespace ff\http;
  */
 function curl(string $method, string $url, ?string $body, array $headers, array $config): ?array{
 	$method = strtoupper($method);
-	$config = array_merge(\ff\container('#http.curl') ?? [], $config);
+	$config = array_merge(\ff\container('#http/curl') ?? [], $config);
 	$ch = curl_init();
 	if($ch === false) return null;
 	curl_setopt_array($ch, [

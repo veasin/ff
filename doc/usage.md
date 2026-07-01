@@ -368,7 +368,7 @@ log('查询超时', 'warning');                     // 指定级别
 log(['action' => 'sync', 'count' => 100]);      // 非 string 自动 JSON
 
 // 注入 PSR Logger
-container('#log', $monolog);
+container('#log:', $monolog);
 ```
 
 ---
@@ -407,7 +407,7 @@ $msg = i18n('welcome_msg', ['name' => '张三']);
 middleware(cors(), basic(), rate(), $handler);
 
 // 自定义中间件 — 认证失败返回 401，不继续
-fn ($next) => container('#mw:auth:user')
+fn ($next) => container('#mw/auth/user')
     ? $next()
     : output(null, 401)
 ```

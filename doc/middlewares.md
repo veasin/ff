@@ -14,18 +14,18 @@ middleware(cors(), basic(), log(), $handler);
 从 `Authorization: Basic` 头提取用户名密码，调用验证器。验证器返回值直接存入 user（可返回用户对象而非 `true`），支持密码含冒号。
 
 ```php
-container('#mw:auth:validators', [fn($user, $pass) => $user]);//设置验证器
+container('#mw/auth/validators', [fn($user, $pass) => $user]);//设置验证器
 middleware(basic(), $handler);//使用中间件
-container('#mw:auth:user');//获取认证用户
+container('#mw/auth/user');//获取认证用户
 ```
 
 参数：
-- **`$prefix`**: `string` 默认 `'#mw:auth'` 容器键前缀
+- **`$prefix`**: `string` 默认 `'#mw/auth'` 容器键前缀
 - **`$realm`**: `?string` 默认 `null` WWW-Authenticate realm，null 时使用 i18n 翻译
 
 容器配置：
-- **`{prefix}:validators`**: `array` - 验证器数组，接收 `($user, $pass)` 返回用户信息
-- **`{prefix}:user`**: `mixed` - 认证通过后写入用户信息
+- **`{prefix}/validators`**: `array` - 验证器数组，接收 `($user, $pass)` 返回用户信息
+- **`{prefix}/user`**: `mixed` - 认证通过后写入用户信息
 
 ---
 
@@ -34,18 +34,18 @@ container('#mw:auth:user');//获取认证用户
 从请求头或 URL 查询参数 `?token=` 提取 token，调用验证器。
 
 ```php
-container('#mw:auth:validators', [fn($token) => $user]);//设置验证器
+container('#mw/auth/validators', [fn($token) => $user]);//设置验证器
 middleware(token(), $handler);//使用中间件，从 Authorization 头提取
-middleware(token('#mw:auth', 'X-Auth-Token'), $handler);//自定义请求头
+middleware(token('#mw/auth', 'X-Auth-Token'), $handler);//自定义请求头
 ```
 
 参数：
-- **`$prefix`**: `string` 默认 `'#mw:auth'` 容器键前缀
+- **`$prefix`**: `string` 默认 `'#mw/auth'` 容器键前缀
 - **`$headerName`**: `string` 默认 `'Authorization'` 请求头名称（未取到时 fallback 查询参数 `token`）
 
 容器配置：
-- **`{prefix}:validators`**: `array` - 验证器数组，接收 `($token)` 返回用户信息
-- **`{prefix}:user`**: `mixed` - 认证通过后写入用户信息
+- **`{prefix}/validators`**: `array` - 验证器数组，接收 `($token)` 返回用户信息
+- **`{prefix}/user`**: `mixed` - 认证通过后写入用户信息
 
 ---
 
@@ -54,22 +54,22 @@ middleware(token('#mw:auth', 'X-Auth-Token'), $handler);//自定义请求头
 从 `Authorization: Bearer <token>` 提取 JWT，HMAC 验证签名后解码 payload。
 
 ```php
-container('#mw:auth:secret', 'your-secret-key');//设置 HMAC 签名密钥
-container('#mw:auth:validators', [fn($payload) => $user]);//设置验证器
+container('#mw/auth/secret', 'your-secret-key');//设置 HMAC 签名密钥
+container('#mw/auth/validators', [fn($payload) => $user]);//设置验证器
 middleware(jwt(), $handler);//使用中间件
-container('#mw:auth:payload');//获取解码后的 JWT payload
-container('#mw:auth:user');//获取认证用户
+container('#mw/auth/payload');//获取解码后的 JWT payload
+container('#mw/auth/user');//获取认证用户
 ```
 
 参数：
-- **`$prefix`**: `string` 默认 `'#mw:auth'` 容器键前缀
+- **`$prefix`**: `string` 默认 `'#mw/auth'` 容器键前缀
 - **`$algo`**: `string` 默认 `'HS256'` 签名算法，支持 `HS256`、`HS512`
 
 容器配置：
-- **`{prefix}:secret`**: `string` - HMAC 签名密钥
-- **`{prefix}:validators`**: `array` - 验证器数组，接收 `($payload)` 返回用户信息
-- **`{prefix}:user`**: `mixed` - 认证通过后写入用户信息
-- **`{prefix}:payload`**: `array` - 自动写入解码后的 JWT payload
+- **`{prefix}/secret`**: `string` - HMAC 签名密钥
+- **`{prefix}/validators`**: `array` - 验证器数组，接收 `($payload)` 返回用户信息
+- **`{prefix}/user`**: `mixed` - 认证通过后写入用户信息
+- **`{prefix}/payload`**: `array` - 自动写入解码后的 JWT payload
 
 ---
 
@@ -78,18 +78,18 @@ container('#mw:auth:user');//获取认证用户
 从请求头或 URL 查询参数提取 API Key，调用验证器。
 
 ```php
-container('#mw:auth:validators', [fn($apiKey) => $user]);//设置验证器
+container('#mw/auth/validators', [fn($apiKey) => $user]);//设置验证器
 middleware(apikey(), $handler);//使用中间件
 ```
 
 参数：
-- **`$prefix`**: `string` 默认 `'#mw:auth'` 容器键前缀
+- **`$prefix`**: `string` 默认 `'#mw/auth'` 容器键前缀
 - **`$headerName`**: `string` 默认 `'X-API-Key'` 请求头名称
 - **`$queryName`**: `string` 默认 `'api_key'` URL 查询参数名
 
 容器配置：
-- **`{prefix}:validators`**: `array` - 验证器数组，接收 `($apiKey)` 返回用户信息
-- **`{prefix}:user`**: `mixed` - 认证通过后写入用户信息
+- **`{prefix}/validators`**: `array` - 验证器数组，接收 `($apiKey)` 返回用户信息
+- **`{prefix}/user`**: `mixed` - 认证通过后写入用户信息
 
 ---
 
@@ -124,7 +124,7 @@ middleware(csrf(verify: true), $handler);//验证 token
 ```
 
 容器配置：
-- **`#mw:csrf:token`**: `string` - 存储/读取当前会话的 CSRF token
+- **`#mw/csrf/token`**: `string` - 存储/读取当前会话的 CSRF token
 
 ---
 
@@ -141,10 +141,10 @@ middleware(error([\DomainException::class => [422, '{message}']]), $handler);// 
 
 `int` 值只设置状态码，HTTP 状态描述为空。`[int, string]` 中 string 为 i18n 键或模板，支持上下文占位符：`{status}`、`{code}`、`{message}`、`{file}`、`{line}`。其中 `{message}` 直接替换为 `$e->getMessage()`，无需预先注册翻译。
 
-未配置消息时自动回退到 `container("#error:$code")` 查找，存在则过 i18n，不存在则状态描述为空：
+未配置消息时自动回退到 `container("#mw/error/$code")` 查找，存在则过 i18n，不存在则状态描述为空：
 
 ```php
-container('#error:400', '#app:bad_request');
+container('#mw/error/400', '#app:bad_request');
 container('i18n.zh_CN.#app:bad_request', '错误的请求');
 ```
 
@@ -214,11 +214,11 @@ middleware(rate(30, 60, 'api'), $handler);//自定义 key 前缀
 - **`$key`**: `string` 默认 `'rate'` 限流键名前缀
 
 容器配置：
-- **`#rate:storage`**: `callable` - 自定义存储，签名 `fn($key) => [...]`（读取）或 `fn($key, $value, $ttl) => 1`（写入）
+- **`#mw/rate/storage`**: `callable` - 自定义存储，签名 `fn($key) => [...]`（读取）或 `fn($key, $value, $ttl) => 1`（写入）
 
 ```php
-container('#rate:storage', fn($key) => [...]);//读取
-container('#rate:storage', fn($key, $value, $ttl) => 1);//写入
+container('#mw/rate/storage', fn($key) => [...]);//读取
+container('#mw/rate/storage', fn($key, $value, $ttl) => 1);//写入
 ```
 
 ---
@@ -246,15 +246,15 @@ middleware(serve('/var/www/public', ['control' => 'etag,modified', 'age' => 8640
   - `'modified'` — Last-Modified 条件缓存，命中返回 304
   - `['control' => 'etag,modified', 'age' => 3600]` — 组合策略，`control` 逗号分隔，`age` 为 max-age 秒数
 
-优先级：显式传参 > `container('#static:cache')` > 默认无缓存
+优先级：显式传参 > `container('#mw/static/cache')` > 默认无缓存
 
 内置 MIME 类型支持：`html`、`htm`、`txt`、`css`、`js`、`json`、`png`、`jpg`、`jpeg`、`gif`、`svg`、`ico`、`woff`、`woff2`、`ttf`、`zip`、`xml`
 
 容器配置：
-- **`#static:mimes`**: `array` - 扩展 MIME 类型
-- **`#static:cache`**: `null|false|int|string|array` - 全局默认缓存策略，参数未传时回退到此配置
+- **`#mw/static/mimes`**: `array` - 扩展 MIME 类型
+- **`#mw/static/cache`**: `null|false|int|string|array` - 全局默认缓存策略，参数未传时回退到此配置
 
 ```php
-container('#static:mimes', ['webp' => 'image/webp']);//扩展 MIME 类型
-container('#static:cache', 86400);//全局默认缓存 1 天
+container('#mw/static/mimes', ['webp' => 'image/webp']);//扩展 MIME 类型
+container('#mw/static/cache', 86400);//全局默认缓存 1 天
 ```

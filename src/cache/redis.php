@@ -37,7 +37,7 @@ function redis(string|array|null $key = null, mixed $value = null, string|int|ar
 	if(!is_bool($middleware)) [$middleware, $set] = [true, $middleware];
 	if(is_int($set)) $set = ['ttl' => $set];
 	if(is_string($set)) $set = ['config' => $set];
-	if(isset($set['config'])) $set = [...(container("#cache.redis.{$set['config']}") ?? []), ...$set];
+	if(isset($set['config'])) $set = [...(container("#redis.{$set['config']}") ?? []), ...$set];
 	if($middleware) return function($next) use ($key, $set, $value){
 		if(!is_string($key)) return $next();
 		$prefix = $set['prefix'] ?? '';
@@ -54,7 +54,7 @@ function redis(string|array|null $key = null, mixed $value = null, string|int|ar
 	static $conn = null;
 	static $failed = false;
 	if($conn === null && !$failed){
-		$config = container('cache.redis') ?: ['host' => '127.0.0.1', 'port' => 6379];
+		$config = container('#redis.default') ?: ['host' => '127.0.0.1', 'port' => 6379];
 		try{
 			$c = new \Redis();
 			$c->connect($config['host'], $config['port'] ?? 6379);
@@ -74,7 +74,7 @@ function redis(string|array|null $key = null, mixed $value = null, string|int|ar
 			null === $key => $conn->flushAll(),
 			is_string($key) => ($v = $conn->get($prefix . $key)) !== false ? unserialize($v) : null,
 			array_is_list($key) => array_combine($key, array_map(fn($k) => ($v = $conn->get($prefix . $k)) !== false ? unserialize($v) : null, $key)),
-			default => array_walk($key, fn($v, $k) => $conn->set($prefix . $k, serialize($v))) && null,
+			default => (array_walk($key, fn($v, $k) => $conn->set($prefix . $k, serialize($v))) ? null : null),
 		},
 		2 => null === $value ? $conn->del($prefix . $key) : $conn->set($prefix . $key, serialize($value)),
 		default => $conn->setex($prefix . $key, $set['ttl'] ?? 0, serialize($value)),

@@ -56,7 +56,7 @@ test('批量写入后读取验证', apcu(['k3', 'k4']), ['k3' => 'v3', 'k4' => '
 test('清空全部', apcu(null), true);
 test('清空后读取为空', apcu('k2'), null);
 
-container('#cache.apcu.test_cfg', ['prefix' => 'app_', 'ttl' => 300]);
+container('#apcu.test_cfg', ['prefix' => 'app_', 'ttl' => 300]);
 test('config 简写写入带前缀',
 	apcu('cfg_key', 'cfg_val', 'test_cfg'),
 	true

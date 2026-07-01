@@ -9,6 +9,7 @@
 > - 输出层：[output](#output---输出数据)
 > - 流程控制：[route](#route---路由匹配) | [middleware](#middleware---中间件执行引擎) | [hump](#hump---链式中间件执行器) | [hook](#hook---钩子系统)
 > - 缓存：[cache](#cache---多级缓存链) | [apcu](#apcu---APCu-缓存驱动) | [redis](#redis---redis-缓存驱动)
+> - 队列：[queue](#queue---队列操作) | [redis](#redis---redis-队列驱动) | [db](#db---数据库队列驱动)
 > - 数据库：[db](#db---数据库操作)
 > - HTTP客户端：[http](#http---http-请求)
 > - 国际化：[i18n](#i18n---多语言翻译)
@@ -564,6 +565,74 @@ cache(redis('key', 'fallback', middleware: 60), fn($next) => null);
 
 ---
 
+**队列**
+
+## queue - 队列操作
+
+统一队列入口，支持 Redis list 和数据库（SQLite/MySQL）两种驱动。
+第二参数为闭包时进入消费模式，否则为生产模式。
+
+```php
+// ---- 生产消息 ----
+queue('orders', ['order_id' => 123]);                  // 默认驱动（Redis）
+queue('orders', 'plain text');                          // 字符串消息
+queue('orders', $msg, 'email');                        // 指定命名配置
+queue('orders', $msg, ['driver' => 'db']);             // 指定内联配置
+queue(['q1' => 'm1', 'q2' => 'm2']);                   // 批量生产
+
+// ---- 消费消息 ----
+queue('orders', function($msg) {
+    return true;        // ack 确认（处理成功）
+    return false;       // nack + 重新入队
+    return null;        // nack + 丢弃
+    return 5;           // 5 秒后重试
+});
+```
+
+配置：
+- **`#queue`**: `array` - 默认队列配置，指定 `driver`（`redis` 或 `db`）
+- **`#queue/redis`**: `array` - Redis 驱动配置（`config` 指定 `#redis.{name}` 连接名，`prefix`、`ttl`）
+- **`#queue/db`**: `array` - 数据库驱动配置（`table`、`config`、`db_type`）
+
+---
+
+## redis - Redis 队列驱动
+
+Redis list 驱动的底层函数，可在 queue() 外独立使用。
+
+```php
+redis('orders', ['id' => 1]);                              // 生产
+redis('orders', fn($m) => true);                           // 消费
+redis('orders', fn($m) => true, ['timeout' => 10]);        // 消费指定超时
+```
+
+生产使用 `lPush + serialize`，消费使用 `brPop` 阻塞弹出。
+`timeout=0` 永久阻塞。
+
+容器配置：
+- **`#queue/redis`**: `array` - 配置，支持 `config`（`#redis.{name}` 连接名，默认 `default`）、`prefix`、`ttl`、`timeout`
+- **`#redis.{name}`**: `array` - Redis 连接配置（`host`、`port`、`password`、`database`、`timeout`、`prefix`），`#redis.default` 为默认
+
+---
+
+## db - 数据库队列驱动
+
+基于 PDO 的数据库队列驱动，零新依赖，开箱即用。
+自动创建 `ff_queue` 表，支持 SQLite 和 MySQL。
+
+```php
+db('orders', ['id' => 1]);                                 // 生产
+db('orders', fn($m) => true);                              // 消费
+db('orders', fn($m) => true, ['config' => 'queue']);       // 指定 db 连接名
+```
+
+生产 INSERT，消费 SELECT + DELETE（类 BRPOP 语义），失败时 re-INSERT。
+
+容器配置：
+- **`#queue/db`**: `array` - 配置，支持 `table`（默认 `ff_queue`）、`config`（`db()` 连接名 `#db.{name}`）、`db_type`（`sqlite`/`mysql`）
+
+---
+
 **数据库**
 
 ## db - 数据库操作
@@ -594,10 +663,10 @@ db('ROLLBACK TO SAVEPOINT sp1');//回滚到保存点
 ```
 
 容器配置：
-- **`db.{name}`**: `array` - 数据库连接配置，支持 `dsn`、`username`、`password`、`options`
+- **`#db.{name}`**: `array` - 数据库连接配置，支持 `dsn`、`username`、`password`、`options`
 
 ```php
-container('db.default', ['dsn' => 'mysql:host=localhost;dbname=test', 'username' => 'root', 'password' => '']);
+container('#db.default', ['dsn' => 'mysql:host=localhost;dbname=test', 'username' => 'root', 'password' => '']);
 $user = db('SELECT * FROM users WHERE id = ?', [1], 'row', 'default');//使用命名配置
 ```
 
@@ -714,18 +783,18 @@ $headers = http('GET https://api.example.com/users', mode: 'headers'); // 只返
 container('#http', ['timeout' => 10, 'ssl_verify' => false]);
 
 // 驱动特定配置（cURL 优先于全局）
-container('#http.curl', ['timeout' => 5, 'redirect' => 3]);
+container('#http/curl', ['timeout' => 5, 'redirect' => 3]);
 
 // PHP stream 配置
-container('#http.stream', ['timeout' => 15]);
+container('#http/stream', ['timeout' => 15]);
 
 // 自定义驱动（覆盖自动选择）
-container('#http.driver', fn($method, $url, $body, $headers, $config) => [
+container('#http:', fn($method, $url, $body, $headers, $config) => [
     // 返回 ['body' => ..., 'code' => ..., 'headers' => [...], 'message' => '']
 ]);
 ```
 
-配置优先级：`$option` 调用时传参 > `#http.curl`/`#http.stream` 驱动配置 > `#http` 全局配置。
+配置优先级：`$option` 调用时传参 > `#http/curl`/`#http/stream` 驱动配置 > `#http` 全局配置。
 
 **失败处理：** 连接超时、DNS 解析失败、SSL 握手失败等网络错误统一返回 `null`，通过 `mode: 'ok'` 或 `=== null` 判断。
 
@@ -776,11 +845,11 @@ log(new StringableClass());//支持 Stringable 对象
 ```
 
 容器配置：
-- **`#log`**: `object|callable` - PSR Logger 对象或闭包，签名 `fn($level, $message, $context)`
+- **`#log:`**: `object|callable` - PSR Logger 对象或闭包，签名 `fn($level, $message, $context)`
 
 ```php
-container('#log', $psrLogger);//注入 PSR Logger
-container('#log', fn($level, $message, $context) => ...);//注入闭包
+container('#log:', $psrLogger);//注入 PSR Logger
+container('#log:', fn($level, $message, $context) => ...);//注入闭包
 ```
 
 ---

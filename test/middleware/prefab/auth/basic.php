@@ -7,8 +7,8 @@ use function ff\middleware\prefab\basic;
 
 test('auth_basic: 未认证返回401',
 	function(){
-		container('#mw:auth:validators', [fn($user, $pass) => $user === 'admin' && $pass === '123456' ? 'admin' : null]);
-		container('#mw:auth:user', null);
+		container('#mw/auth/validators', [fn($user, $pass) => $user === 'admin' && $pass === '123456' ? 'admin' : null]);
+		container('#mw/auth/user', null);
 		container('#out.response', null);
 		container('#in.headers', null);
 		$_SERVER['REQUEST_METHOD'] = 'GET';
@@ -20,8 +20,8 @@ test('auth_basic: 未认证返回401',
 
 test('auth_basic: 认证成功返回结果',
 	function(){
-		container('#mw:auth:validators', [fn($user, $pass) => $user === 'admin' && $pass === '123456' ? 'admin' : null]);
-		container('#mw:auth:user', null);
+		container('#mw/auth/validators', [fn($user, $pass) => $user === 'admin' && $pass === '123456' ? 'admin' : null]);
+		container('#mw/auth/user', null);
 		container('#out.response', null);
 		container('#in.headers', null);
 		$_SERVER['REQUEST_METHOD'] = 'GET';
@@ -32,8 +32,8 @@ test('auth_basic: 认证成功返回结果',
 
 test('auth_basic: 密码错误返回403',
 	function(){
-		container('#mw:auth:validators', [fn($user, $pass) => $user === 'admin' && $pass === '123456' ? 'admin' : null]);
-		container('#mw:auth:user', null);
+		container('#mw/auth/validators', [fn($user, $pass) => $user === 'admin' && $pass === '123456' ? 'admin' : null]);
+		container('#mw/auth/user', null);
 		container('#out.response', null);
 		container('#in.headers', null);
 		$_SERVER['REQUEST_METHOD'] = 'GET';
@@ -45,8 +45,8 @@ test('auth_basic: 密码错误返回403',
 
 test('auth_basic: 密码含冒号正确解析',
 	function(){
-		container('#mw:auth:validators', [fn($user, $pass) => $user === 'admin' && $pass === 'pass:word:123' ? 'admin' : null]);
-		container('#mw:auth:user', null);
+		container('#mw/auth/validators', [fn($user, $pass) => $user === 'admin' && $pass === 'pass:word:123' ? 'admin' : null]);
+		container('#mw/auth/user', null);
 		container('#out.response', null);
 		container('#in.headers', null);
 		$_SERVER['REQUEST_METHOD'] = 'GET';

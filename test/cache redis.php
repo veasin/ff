@@ -7,7 +7,7 @@ use function ff\cache\redis;
 // Redis 中间件工厂测试
 // 无 Redis 服务器时，中间件自动回退到 $next() 进行计算
 
-container('cache.redis', ['host' => '127.0.0.1', 'port' => 6379]);
+container('#redis.default', ['host' => '127.0.0.1', 'port' => 6379]);
 
 test('未命中时计算并存储',
 	cache(redis('test_key', middleware: ['ttl' => 60]), fn($next) => 'computed'),

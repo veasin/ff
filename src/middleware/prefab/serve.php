@@ -4,7 +4,7 @@ namespace ff\middleware\prefab;
 use function ff\{container, from, output};
 
 /**
- * 静态文件服务中间件。根据 URI 在指定目录查找静态文件，自动设置 MIME 类型，支持多种缓存策略。目录自动追加 index.html。扩展 MIME 类型通过 container('#static:mimes') 配置。
+ * 静态文件服务中间件。根据 URI 在指定目录查找静态文件，自动设置 MIME 类型，支持多种缓存策略。目录自动追加 index.html。扩展 MIME 类型通过 container('#mw/static/mimes') 配置。
  * 使用方式:
  * ```
  * middleware(serve('/var/www/public'), $handler);//基础使用（无缓存头）
@@ -42,8 +42,8 @@ function serve(string $root, null|false|int|string|array $cache = null): callabl
 			'ttf' => 'font/ttf',
 			'zip' => 'application/zip',
 		];
-		$contentType = container("#static:mimes.$ext") ?? $types[$ext] ?? (mime_content_type($file) || 'application/octet-stream');
-		$cfg = $cache ?? container('#static:cache');
+		$contentType = container("#mw/static/mimes.$ext") ?? $types[$ext] ?? (mime_content_type($file) || 'application/octet-stream');
+		$cfg = $cache ?? container('#mw/static/cache');
 		[$control, $age] = match (true) {
 			false === $cfg => [false, 0],
 			is_int($cfg) => [null, $cfg],

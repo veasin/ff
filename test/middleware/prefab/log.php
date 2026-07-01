@@ -6,7 +6,7 @@ use function ff\{middleware, test, container, log as flog};
 use function ff\middleware\prefab\log as mw_log;
 
 $logged = [];
-container('#log', function($level, $message, $context) use (&$logged){
+container('#log:', function($level, $message, $context) use (&$logged){
 	$logged[] = ['level' => $level, 'message' => $message, 'context' => $context];
 });
 

@@ -37,7 +37,7 @@ function apcu(string|array|null $key = null, mixed $value = null, string|int|arr
 	if(!is_bool($middleware)) [$middleware, $set] = [true, $middleware];
 	if(is_int($set)) $set = ['ttl' => $set];
 	if(is_string($set)) $set = ['config' => $set];
-	if(isset($set['config'])) $set = [...(container("#cache.apcu.{$set['config']}") ?? []), ...$set];
+	if(isset($set['config'])) $set = [...(container("#apcu.{$set['config']}") ?? []), ...$set];
 	if($middleware) return function($next) use ($key, $set, $value){
 		if(!is_string($key)) return $next();
 		$prefix = $set['prefix'] ?? '';
@@ -57,7 +57,7 @@ function apcu(string|array|null $key = null, mixed $value = null, string|int|arr
 			null === $key => \apcu_clear_cache(),
 			is_string($key) => ($v = \apcu_fetch($prefix . $key)) !== false ? $v : null,
 			array_is_list($key) => array_combine($key, array_map(fn($k) => ($v = \apcu_fetch($prefix . $k)) !== false ? $v : null, $key)),
-			default => array_walk($key, fn($v, $k) => \apcu_store($prefix . $k, $v)) && null,
+			default => (array_walk($key, fn($v, $k) => \apcu_store($prefix . $k, $v)) ? null : null),
 		},
 		2 => null === $value ? \apcu_delete($prefix . $key) : \apcu_store($prefix . $key, $value),
 		default => \apcu_store($prefix . $key, $value, $set['ttl'] ?? 0),

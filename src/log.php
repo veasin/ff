@@ -5,9 +5,9 @@ namespace ff;
  * 日志函数，PSR-3 风格输出。通过容器注入 PSR Logger 或闭包定制输出行为。
  * ```
  * // 注入 PSR Logger 对象（实现 log() 方法的对象）
- * container('#log', $logger);
+ * container('#log:', $logger);
  * // 注入闭包
- * container('#log', fn($level, $message, $context) => ...);
+ * container('#log:', fn($level, $message, $context) => ...);
  * // 使用
  * log('用户 {user} 登录', ['user' => 'admin'], 'info');
  * log('错误: 连接失败', 'error');
@@ -34,8 +34,8 @@ function log(string|array|object $message, array|string|null $context = null, st
 	else $context ??= [];
 	$level = strtolower($level);
 	if(!isset($levels[$level])) $level = 'info';
-	if(container('#log')){
-		$logger = container('#log');
+	if(container('#log:')){
+		$logger = container('#log:');
 		$fn = null;
 		if(is_callable($logger)) $fn = $logger;
 		if($logger && is_object($logger) && method_exists($logger, 'log')) $fn = $logger->log(...);

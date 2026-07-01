@@ -16,9 +16,9 @@ function createJwt(string $secret, array $payload, string $algo = 'HS256'): stri
 
 test('jwt: 无 token 返回401',
 	function(){
-		container('#mw:auth:secret', 'test-secret');
-		container('#mw:auth:validators', [fn($payload) => ($payload['sub'] ?? null) === 'user1' ? 'user1' : null]);
-		container('#mw:auth:user', null);
+		container('#mw/auth/secret', 'test-secret');
+		container('#mw/auth/validators', [fn($payload) => ($payload['sub'] ?? null) === 'user1' ? 'user1' : null]);
+		container('#mw/auth/user', null);
 		container('#out.response', null);
 		container('#in.headers', null);
 		$_SERVER['REQUEST_METHOD'] = 'GET';
@@ -30,9 +30,9 @@ test('jwt: 无 token 返回401',
 test('jwt: 认证成功返回结果',
 	function(){
 		$token = createJwt('test-secret', ['sub' => 'user1', 'exp' => time() + 3600]);
-		container('#mw:auth:secret', 'test-secret');
-		container('#mw:auth:validators', [fn($payload) => ($payload['sub'] ?? null) === 'user1' ? 'user1' : null]);
-		container('#mw:auth:user', null);
+		container('#mw/auth/secret', 'test-secret');
+		container('#mw/auth/validators', [fn($payload) => ($payload['sub'] ?? null) === 'user1' ? 'user1' : null]);
+		container('#mw/auth/user', null);
 		container('#out.response', null);
 		container('#in.headers', null);
 		$_SERVER['REQUEST_METHOD'] = 'GET';
@@ -44,9 +44,9 @@ test('jwt: 认证成功返回结果',
 test('jwt: 签名错误返回403',
 	function(){
 		$token = createJwt('wrong-secret', ['sub' => 'user1', 'exp' => time() + 3600]);
-		container('#mw:auth:secret', 'test-secret');
-		container('#mw:auth:validators', [fn($payload) => ($payload['sub'] ?? null) === 'user1' ? 'user1' : null]);
-		container('#mw:auth:user', null);
+		container('#mw/auth/secret', 'test-secret');
+		container('#mw/auth/validators', [fn($payload) => ($payload['sub'] ?? null) === 'user1' ? 'user1' : null]);
+		container('#mw/auth/user', null);
 		container('#out.response', null);
 		container('#in.headers', null);
 		$_SERVER['REQUEST_METHOD'] = 'GET';

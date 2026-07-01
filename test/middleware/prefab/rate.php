@@ -8,7 +8,7 @@ use function ff\middleware\prefab\rate;
 test('rate: 允许通过请求',
 	function(){
 		$storage = [];
-		container('#rate:storage', function($key = null, $value = null, $ttl = null) use (&$storage){
+		container('#mw/rate/storage', function($key = null, $value = null, $ttl = null) use (&$storage){
 			if(func_num_args() <= 1) return $storage[$key] ?? null;
 			$storage[$key] = $value;
 		});
@@ -21,7 +21,7 @@ test('rate: 允许通过请求',
 test('rate: 超出限制返回429',
 	function(){
 		$storage = [];
-		container('#rate:storage', function($key = null, $value = null, $ttl = null) use (&$storage){
+		container('#mw/rate/storage', function($key = null, $value = null, $ttl = null) use (&$storage){
 			if(func_num_args() <= 1) return $storage[$key] ?? null;
 			$storage[$key] = $value;
 		});
@@ -36,7 +36,7 @@ test('rate: 超出限制返回429',
 test('rate: 不同IP独立计数',
 	function(){
 		$storage = [];
-		container('#rate:storage', function($key = null, $value = null, $ttl = null) use (&$storage){
+		container('#mw/rate/storage', function($key = null, $value = null, $ttl = null) use (&$storage){
 			if(func_num_args() <= 1) return $storage[$key] ?? null;
 			$storage[$key] = $value;
 		});

@@ -62,7 +62,10 @@
       "src/middleware/prefab/log.php",
       "src/middleware/prefab/rate.php",
       "src/middleware/prefab/serve.php",
-      "src/route/rest.php"
+      "src/route/rest.php",
+      "src/queue.php",
+      "src/queue/redis.php",
+      "src/queue/db.php"
     ]
   }
 }

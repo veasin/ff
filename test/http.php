@@ -54,7 +54,7 @@ $mockDriver = function($method, $url, $body, $headers, $config) use($port){
 	}
 	return ['body' => json_encode(['error' => 'not found']), 'code' => 404, 'headers' => ['Content-Type: application/json'], 'message' => 'Not Found'];
 };
-container('#http.driver', $mockDriver);
+container('#http:', $mockDriver);
 
 // ── 核心测试 ──
 
@@ -360,12 +360,12 @@ test('Iterator body 自动 JSON', function() use($base){
 // 39. 自定义驱动（验证 container 注入恢复）
 test('自定义驱动', function() use($base, $mockDriver){
 	$called = false;
-	container('#http.driver', function($method, $url, $body, $headers, $config) use(&$called, $base){
+	container('#http:', function($method, $url, $body, $headers, $config) use(&$called, $base){
 		$called = true;
 		return ['body' => ['custom' => true], 'code' => 201, 'headers' => ['X-Custom: yes'], 'message' => 'Created'];
 	});
 	$r = http("POST $base/json", ['test' => 1]);
-	container('#http.driver', $mockDriver);
+	container('#http:', $mockDriver);
 	return $called && $r['code'] === 201 && ($r['body']['custom'] ?? null) === true;
 }, true);
 

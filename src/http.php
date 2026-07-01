@@ -68,7 +68,7 @@ function http(string $request,
 	$config = array_merge(container('#http') ?? [], $option);
 	$config['headers'] = $flatHeaders;
 	if($config['log'] ?? false) log("http $method $url");
-	$driver = container('#http.driver');
+	$driver = container('#http:');
 	$result = $driver !== null ? $driver($method, $url, $encodedBody, $flatHeaders, $config)
 		: (extension_loaded('curl') ? http\curl($method, $url, $encodedBody, $flatHeaders, $config)
 		: http\stream($method, $url, $encodedBody, $flatHeaders, $config));

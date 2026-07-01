@@ -29,7 +29,7 @@ test('error: int 配置 message=空', function() {
 }, true);
 
 test('error: int + container 后备', function() {
-    container('#error:400', '错误的请求');
+    container('#mw/error/400', '错误的请求');
     container('#out.response', null);
     middleware(error([\InvalidArgumentException::class => 400]), function() {
         throw new \InvalidArgumentException('参数错误');

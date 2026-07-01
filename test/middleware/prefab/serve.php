@@ -107,9 +107,9 @@ test('serve: 数组配置 control + age', function() use ($testDir) {
 // 缓存策略：容器配置
 test('serve: 容器配置 #static:cache', function() use ($testDir) {
 	container('#in.input', ['method' => 'GET', 'uri' => '/test.txt']);
-	container('#static:cache', 7200);
+	container('#mw/static/cache', 7200);
 	middleware(serve($testDir), 'not found');
-	container('#static:cache', null);
+	container('#mw/static/cache', null);
 	return container('#out.response.headers.Cache-Control');
 }, 'public, max-age=7200');
 
