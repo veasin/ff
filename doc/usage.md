@@ -10,7 +10,7 @@
 container(set) → [ input() → { 业务 } → output() ]  
                     ↑           ↑             ↑
               from()+filter()   log()        i18n()
-                       name() → db()/apcu()/redis() → cache() 
+                        key() → db()/apcu()/redis() → cache() 
                     
 ```
 
@@ -450,11 +450,12 @@ hook(null);                              // 清空全部
 
 以下函数不与核心路径直接关联：
 
-**name()** — 命名模板工具，统一管理项目中各种 key 的命名规则，可在任意阶段使用
+**key()** — 命名键管理工具，统一管理项目中各种缓存/存储 key 的命名规则，按业务实体聚合，可在任意阶段使用
 
 ```php
-container('#name', ['cache' => ['user' => 'cache:user:{uid}']]);
-$key = name('user', ['uid' => 123], 'cache');  // 'cache:user:123'
+container('#key', ['user' => ['user:{id}', 'apcu' => 'user_cache:{id}', 'redis' => 'user:{id}']]);
+$key = key('user', ['id' => 123]);                 // 'user:123'
+$key = key('user', ['id' => 123], 'apcu');          // 'user_cache:123'
 ```
 
 **safe()** — 异常兜底工具，调用可能抛异常但失败可接受时使用，失败返回 null。需要按异常类型区分处理时，通过容器注册错误处理器：

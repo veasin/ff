@@ -4,7 +4,7 @@
 ---
 
 > **目录**
-> - [container](#container---容器方法) | [env](#env---环境变量读取) | [name](#name---命名配置管理) | [args](#args---命令行参数解析) | [safe](#safe---安全调用)
+> - [container](#container---容器方法) | [env](#env---环境变量读取) | [key](#key---命名键管理) | [args](#args---命令行参数解析) | [safe](#safe---安全调用)
 > - 输入层：[input](#input---输入数据获取) | [from](#from---从指定来源获取原始值) | [filter](#filter---数据验证与转换)
 > - 输出层：[output](#output---输出数据)
 > - 流程控制：[route](#route---路由匹配) | [middleware](#middleware---中间件执行引擎) | [hump](#hump---链式中间件执行器) | [hook](#hook---钩子系统)
@@ -54,19 +54,30 @@ env('APP_KEY');//读取 .env 文件
 
 ---
 
-## name - 命名配置管理
+## key - 命名键管理
+
+统一项目中所有缓存/存储 key 的命名规则，按业务实体聚合管理。0 号元素为默认模板，命名键为特定层覆盖。
 
 ```php
-$key = name('user.id');//返回 'user.id'
-$key = name('user', ['uid' => 123], 'cache');//命名空间替换，返回 'cache:user:123'
+container('#key', [
+    'user'    => ['user:{id}', 'apcu' => 'user_cache:{id}', 'redis' => 'user:{id}'],
+    'session' => ['sess:{token}'],
+    'article' => 'art:{id}',
+]);
+$key = key('user', ['id' => 123]);                  // 'user:123'（0 号默认）
+$key = key('user', ['id' => 123], 'apcu');           // 'user_cache:123'（指定层）
+$key = key('session', ['token' => 'abc'], 'redis');  // 'sess:abc'（层不存在回退 0 号）
+$key = key('token', ['uid' => 5], 'apcu');           // 'token'（无 0 号返回 key 名）
+$key = key('un_config');                             // 'un_config'（未配置原样返回）
+$key = key('xx:{id}', ['id' => 456]);                // 'xx:456'（内联模板）
 ```
+
+**fallback 规则：**
+- 指定 `$layer`：存在则用，不存在则有 0 号回退 0 号，否则用 `$name` 作模板
+- 不指定 `$layer`：有 0 号用 0 号，否则用 `$name` 作模板
 
 容器配置：
-- **`#name`**: `array` - 命名空间模板配置
-
-```php
-container('#name', ['cache' => ['user' => 'cache:user:{uid}']]);
-```
+- **`#key`**: `array` - 业务键定义，按实体聚合，0 为默认模板，命名键为层覆盖
 
 ---
 
