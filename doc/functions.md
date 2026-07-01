@@ -5,6 +5,7 @@
 
 > **目录**
 > - [container](#container---容器方法) | [env](#env---环境变量读取) | [key](#key---命名键管理) | [args](#args---命令行参数解析) | [safe](#safe---安全调用)
+> - 资源连接：[pdo](#pdo---pdo-资源连接池) | [redis](#redis---redis-资源连接池)
 > - 输入层：[input](#input---输入数据获取) | [from](#from---从指定来源获取原始值) | [filter](#filter---数据验证与转换)
 > - 输出层：[output](#output---输出数据)
 > - 流程控制：[route](#route---路由匹配) | [middleware](#middleware---中间件执行引擎) | [hump](#hump---链式中间件执行器) | [hook](#hook---钩子系统)
@@ -114,6 +115,66 @@ container('#safe', fn(\Throwable $e) => match(true){//注册异常处理器
 ```
 
 处理器返回 `null` 时仍走"失败返回 null"的默认行为。处理器不影响调用成功的返回值。
+
+---
+
+**资源连接**
+
+## pdo - PDO 资源连接池
+
+按配置名管理 PDO 连接生命周期，支持惰性验证与自动重连。由 `db()` 内部自动调用，也可直接使用。
+
+```php
+$pdo = pdo('default');   // 获取/创建默认连接
+$pdo = pdo('slave');     // 获取/创建指定配置连接
+pdo(null);                // 清空所有连接和失败标记
+```
+
+连接通过 `container("#db.{name}")` 配置。默认 `$name = 'default'`，配置缺失或连接失败返回 `null`。
+
+惰性验证：通过 `container('#resource.pdo.ttl')` 设置验证间隔（秒），超时后自动执行 `SELECT 1` 检测连接健康，断连时自动重建。默认 `0` 不验证。
+
+Swoole 自定义工厂：
+```php
+container('#resource/pdo:', fn($config) => (new \Swoole\Database\PDOPool($config))->get());
+$pdo = pdo('default');
+```
+
+容器配置：
+- **`#db.{name}`**: `array` - PDO 连接配置，支持 `dsn`、`username`、`password`、`options`
+- **`#resource.pdo.ttl`**: `int` - 连接验证间隔秒数，默认 `0` 不验证
+- **`#resource/pdo:`**: `callable` - 自定义 PDO 工厂，签名 `fn(array $config): \PDO`
+
+---
+
+## redis - Redis 资源连接池
+
+按配置名管理 Redis 连接生命周期，支持惰性验证与自动重连。由 `cache\redis()` 和 `queue\redis()` 内部自动调用，也可直接使用。
+
+```php
+$redis = redis('default');   // 获取/创建默认连接
+$redis = redis('cache');     // 获取/创建指定配置连接
+redis(null);                  // 清空所有连接和失败标记
+```
+
+连接通过 `container("#redis.{name}")` 配置。默认 `$name = 'default'`，未配置时回退 `['host' => '127.0.0.1', 'port' => 6379]`。Redis 扩展不存在或连接失败返回 `null`。
+
+惰性验证：通过 `container('#resource.redis.ttl')` 设置验证间隔（秒），超时后自动执行 `ping()` 检测连接健康，断连时自动重建。默认 `0` 不验证。
+
+Swoole 协程版 Redis（通过自定义工厂注入）：
+```php
+container('#resource/redis:', fn($config) => {
+    $c = new \Swoole\Coroutine\Redis();
+    $c->connect($config['host'], $config['port'] ?? 6379);
+    return $c;
+});
+$redis = redis('default');
+```
+
+容器配置：
+- **`#redis.{name}`**: `array` - Redis 连接配置，支持 `host`、`port`、`password`、`database`、`timeout`
+- **`#resource.redis.ttl`**: `int` - 连接验证间隔秒数，默认 `0` 不验证
+- **`#resource/redis:`**: `callable` - 自定义 Redis 工厂，签名 `fn(array $config): \Redis`
 
 ---
 

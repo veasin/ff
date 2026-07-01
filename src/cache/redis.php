@@ -48,25 +48,9 @@ function redis(string|array|null $key = null, mixed $value = null, string|int|ar
 		if(null !== $v) redis($k, $v, $set);
 		return $v;
 	};
-	static $exists = null;
-	$exists ??= class_exists('\Redis');
-	if(!$exists) return null;
-	static $conn = null;
-	static $failed = false;
-	if($conn === null && !$failed){
-		$config = container('#redis.default') ?: ['host' => '127.0.0.1', 'port' => 6379];
-		try{
-			$c = new \Redis();
-			$c->connect($config['host'], $config['port'] ?? 6379);
-			if(isset($config['password'])) $c->auth($config['password']);
-			if(isset($config['database'])) $c->select($config['database']);
-			$conn = $c;
-		}catch(\Exception $e){
-			$failed = true;
-			return null;
-		}
-	}
-	if($conn === null) return null;
+	$configName = $set['config'] ?? 'default';
+	$conn = \ff\resource\redis($configName);
+	if(!$conn) return null;
 	$prefix = $set['prefix'] ?? '';
 	return match (func_num_args()) {
 		0 => null,

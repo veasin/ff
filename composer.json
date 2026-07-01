@@ -65,7 +65,9 @@
       "src/route/rest.php",
       "src/queue.php",
       "src/queue/redis.php",
-      "src/queue/db.php"
+      "src/queue/db.php",
+      "src/resource/pdo.php",
+      "src/resource/redis.php"
     ]
   }
 }

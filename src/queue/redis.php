@@ -22,38 +22,24 @@ use function ff\container;
  * @return mixed
  */
 function redis(string $queue, mixed $message, ?array $config = null): mixed{
-	static $conn = null;
-	static $failed = false;
-	if($conn === null && !$failed){
-		$defaults = container('#queue/redis') ?? [];
-		$config = array_merge($defaults, $config ?? []);
-		$name = $config['config'] ?? 'default';
-		$rc = array_merge(container("#redis.{$name}") ?? [], $config);
-		try{
-			$c = new \Redis();
-			$c->connect($rc['host'] ?? '127.0.0.1', $rc['port'] ?? 6379, $rc['timeout'] ?? 0.0);
-			if(isset($rc['password'])) $c->auth($rc['password']);
-			if(isset($rc['database'])) $c->select((int)$rc['database']);
-			if(isset($rc['prefix'])) $c->setOption(\Redis::OPT_PREFIX, $rc['prefix']);
-			$conn = $c;
-		}catch(\Exception $e){
-			$failed = true;
-			return null;
-		}
-	}
-	if($conn === null) return null;
+	$defaults = container('#queue/redis') ?? [];
+	$config = array_merge($defaults, $config ?? []);
+	$name = $config['config'] ?? 'default';
+	$conn = \ff\resource\redis($name);
+	if(!$conn) return null;
+	$prefix = $config['prefix'] ?? '';
 	if($message instanceof \Closure){
 		$timeout = $config['timeout'] ?? 0;
-		$result = $conn->brPop($queue, $timeout);
+		$result = $conn->brPop($prefix . $queue, $timeout);
 		if(!$result) return false;
 		[$q, $raw] = $result;
 		$msg = unserialize($raw);
 		$ret = $message($msg);
 		if($ret === true);
-		elseif($ret === false) $conn->lPush($queue, $raw);
+		elseif($ret === false) $conn->lPush($prefix . $queue, $raw);
 		elseif($ret === null);
-		elseif(is_int($ret) && $ret > 0){ sleep($ret); $conn->lPush($queue, $raw); }
+		elseif(is_int($ret) && $ret > 0){ sleep($ret); $conn->lPush($prefix . $queue, $raw); }
 		return true;
 	}
-	return $conn->lPush($queue, serialize($message));
+	return $conn->lPush($prefix . $queue, serialize($message));
 }

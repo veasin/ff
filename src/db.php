@@ -1,6 +1,9 @@
 <?php
 declare(strict_types=1);
 namespace ff;
+
+use function ff\resource\pdo;
+
 /**
  * 数据库操作函数，支持多种查询模式和事务。
  * ```
@@ -13,7 +16,7 @@ namespace ff;
  * db('BEGIN'); db('COMMIT'); db('ROLLBACK');                    // 事务
  * ```
  * 模式: row|list|value|column|pairs|group|id|count|ok|true|callable
- * 连接通过 container('#db.{configName}') 配置，默认配置名 default
+ * 连接委托 resource\pdo() 管理，通过 container('#db.{configName}') 配置，默认配置名 default
  * @param object|string                       $sql        SQL 语句或 SQL helper 对象
  * @param array|string|int|callable|bool|null $params     参数数组；传入字符串/整数/可调用/bool/null 时作为 mode
  * @param string|int|callable|bool|null       $mode       操作模式；params 为数组时跳过此位的参数被视为 configName
@@ -21,25 +24,11 @@ namespace ff;
  * @return mixed 查询结果，失败返回 null
  */
 function db(object|string $sql, array|string|int|callable|bool|null $params = [], string|int|callable|bool|null $mode = null, ?string $configName = null): mixed{
-	static $connections = [];
 	if(!is_array($params)) [$configName, $mode, $params] = [$mode, $params, []];
 	if(is_object($sql) && (get_class($sql) === 'ff\helpers\sql' || is_a($sql, 'ff\helpers\sql', true))) [$sql, $params] = [(string)$sql, $sql->params];
 	$configName = $configName ?? 'default';
-	if(!isset($connections[$configName])){
-		$config = container("#db.{$configName}") ?? null;
-		if(!is_array($config) || !isset($config['dsn'])) return null;
-		try{
-			$connections[$configName] = new \PDO($config['dsn'], $config['username'] ?? null, $config['password'] ?? null, ($config['options'] ?? []) + [
-					\PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
-					\PDO::ATTR_DEFAULT_FETCH_MODE => \PDO::FETCH_ASSOC,
-					\PDO::ATTR_STRINGIFY_FETCHES => false,
-					\PDO::ATTR_EMULATE_PREPARES => false,
-				]);
-		}catch(\PDOException $e){
-			return null;
-		}
-	}
-	$pdo = $connections[$configName];
+	$pdo = pdo($configName);
+	if(!$pdo) return null;
 	$sqlUpper = trim(strtoupper($sql));
 	if(in_array($sqlUpper, ['BEGIN', 'START TRANSACTION', 'BEGIN TRANSACTION'])) return $pdo->beginTransaction();
 	if($sqlUpper === 'COMMIT') return $pdo->commit();
