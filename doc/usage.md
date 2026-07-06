@@ -376,18 +376,24 @@ container('#log:', $monolog);
 ### i18n()
 
 - 需要多语言支持时使用，翻译 key 与显示内容分离，面向输出内容
-- 翻译通过容器增量设置，key 中的 `.` 自动转 `_`
+- 翻译通过容器按命名空间一次性写入，语言为值的数组键
 
 ```php
 // 设置语言
 i18n(lang: 'en_US');
 
 // 框架内置翻译
-$msg = i18n('#error:internal');
+$msg = i18n('#ff.error.internal');
 
-// 用户翻译 + 占位符替换
-container('i18n.zh_CN.welcome_msg', '欢迎，{name}！');
-$msg = i18n('welcome_msg', ['name' => '张三']);
+// 按命名空间一次性写入用户翻译
+container('^i18n.myapp', [
+    'welcome' => ['欢迎，{name}！', 'en_US' => 'Hello, {name}!'],
+    'greeting' => '你好',       // 所有语言相同
+]);
+
+// 使用
+$msg = i18n('myapp.welcome', ['name' => '张三']);
+$msg = i18n('myapp.welcome', ['name' => 'Alice'], 'en_US');
 ```
 
 ---
@@ -450,12 +456,20 @@ hook(null);                              // 清空全部
 
 以下函数不与核心路径直接关联：
 
-**key()** — 命名键管理工具，统一管理项目中各种缓存/存储 key 的命名规则，按业务实体聚合，可在任意阶段使用
+**key()** — 低层级容器结构化读取，从容器路径读取值，按 layer 选取后原样返回（`mixed`）。null 未命中。
 
 ```php
-container('#key', ['user' => ['user:{id}', 'apcu' => 'user_cache:{id}', 'redis' => 'user:{id}']]);
-$key = key('user', ['id' => 123]);                 // 'user:123'
-$key = key('user', ['id' => 123], 'apcu');          // 'user_cache:123'
+$val = key('#kt.user');                     // 'default_user'（0 号默认）
+$val = key('#kt.user', 'admin');            // 'admin_user'（指定层）
+$val = key('#kt.nonexist');                 // null（未命中）
+```
+
+**name()** — 完整管道读取：读 → 选 → 回退 → 替换。在 `key()` 之上叠加回退路径和 `{placeholder}` 替换，始终返回 `string`
+
+```php
+container('^#key', ['user' => ['user:{id}', 'apcu' => 'user_cache:{id}', 'redis' => 'user:{id}']]);
+$key = name('user', ['id' => 123], prefix: '#key.');  // 'user:123'
+$key = name('user', ['id' => 123], 'apcu', '#key.');  // 'user_cache:123'
 ```
 
 **safe()** — 异常兜底工具，调用可能抛异常但失败可接受时使用，失败返回 null。需要按异常类型区分处理时，通过容器注册错误处理器：

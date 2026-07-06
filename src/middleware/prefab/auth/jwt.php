@@ -21,7 +21,7 @@ function jwt(string $prefix = '#mw/auth', string $algo = 'HS256'): callable{
 	return function($next) use ($prefix, $algo){
 		if(container("$prefix/user")) return $next();
 		$header = from('authorization', 'header') ?? '';
-		if(!str_starts_with($header, 'Bearer ')) return output(null, ['code' => 401, 'headers' => ['WWW-Authenticate' => 'Bearer realm="' . i18n('#auth:realm_jwt') . '"']]);
+		if(!str_starts_with($header, 'Bearer ')) return output(null, ['code' => 401, 'headers' => ['WWW-Authenticate' => 'Bearer realm="' . i18n('#ff.auth.realm_jwt') . '"']]);
 		$token = substr($header, 7);
 		$parts = explode('.', $token);
 		if(count($parts) !== 3) return output(null, 401);

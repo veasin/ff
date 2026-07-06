@@ -19,7 +19,7 @@ function basic(string $prefix = '#mw/auth', ?string $realm = null): callable{
 	return function($next) use ($prefix, $realm){
 		if(container("$prefix/user")) return $next();
 		$header = from('authorization', 'header') ?? '';
-		if(!str_starts_with($header, 'Basic ')) return output(null, ['code' => 401, 'headers' => ['WWW-Authenticate' => "Basic realm=\"" . ($realm ?? i18n('#auth:realm_basic')) . "\""]]);
+		if(!str_starts_with($header, 'Basic ')) return output(null, ['code' => 401, 'headers' => ['WWW-Authenticate' => "Basic realm=\"" . ($realm ?? i18n('#ff.auth.realm_basic')) . "\""]]);
 		$credentials = base64_decode(substr($header, 6));
 		[$user, $pass] = array_pad(explode(':', $credentials, 2), 2, '');
 		foreach(container("$prefix/validators") ?? [] as $validator){

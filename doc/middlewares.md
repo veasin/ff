@@ -135,7 +135,7 @@ middleware(csrf(verify: true), $handler);//验证 token
 ```php
 middleware(error(), $handler);                                            // 默认 500，状态描述为空
 middleware(error([\InvalidArgumentException::class => 400]), $handler);   // int：仅状态码，状态描述为空
-middleware(error([\RuntimeException::class => [500, '#error:msg']]), $handler);// [code, msg]：i18n(msg) 作为 HTTP 状态描述
+middleware(error([\RuntimeException::class => [500, '#ff.error.msg']]), $handler);// [code, msg]：i18n(msg) 作为 HTTP 状态描述
 middleware(error([\DomainException::class => [422, '{message}']]), $handler);// {message} 替换为 $e->getMessage()
 ```
 
@@ -144,8 +144,8 @@ middleware(error([\DomainException::class => [422, '{message}']]), $handler);// 
 未配置消息时自动回退到 `container("#mw/error/$code")` 查找，存在则过 i18n，不存在则状态描述为空：
 
 ```php
-container('#mw/error/400', '#app:bad_request');
-container('i18n.zh_CN.#app:bad_request', '错误的请求');
+container('#mw/error/400', 'myapp.bad_request');
+container('i18n.myapp.bad_request', ['错误的请求', 'en_US' => 'Bad request']);
 ```
 
 参数：

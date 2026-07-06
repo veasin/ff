@@ -50,9 +50,9 @@ test('error: {message} 替换为 $e->getMessage()', function() {
 }, true);
 
 test('error: i18n 上下文格式化', function() {
-    container('i18n.zh_CN.#error:with_line', '第 {line} 行出错');
+    container('i18n.#ff.error.with_line', '第 {line} 行出错');
     container('#out.response', null);
-    middleware(error([\LengthException::class => [400, '#error:with_line']]), function() {
+    middleware(error([\LengthException::class => [400, '#ff.error.with_line']]), function() {
         throw new \LengthException('too long', 0);
     });
     $r = container('#out.response');
@@ -71,11 +71,11 @@ test('error: 未匹配走默认 500', function() {
 }, 500);
 
 test('error: 多异常类型映射', function() {
-    container('i18n.zh_CN.#error:domain', '领域错误');
+    container('i18n.#ff.error.domain', '领域错误');
     container('#out.response', null);
     middleware(error([
         \InvalidArgumentException::class => 400,
-        \DomainException::class => [422, '#error:domain'],
+        \DomainException::class => [422, '#ff.error.domain'],
     ]), function() {
         throw new \DomainException('domain error');
     });

@@ -38,6 +38,7 @@
       "src/output.php",
       "src/i18n.php",
       "src/key.php",
+      "src/name.php",
       "src/hump.php",
       "src/middleware.php",
       "src/route.php",

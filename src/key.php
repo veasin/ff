@@ -1,31 +1,46 @@
 <?php
 declare(strict_types=1);
 namespace ff;
+
 /**
- * 命名键管理，统一项目中所有缓存/存储 key 的命名规则。通过 container('#key') 配置命名模板。
- * 配置按业务实体聚合，0 号元素为默认模板，命名键为特定层覆盖：
+ * 低层级容器结构化读取
+ *
+ * 从容器路径读取值，按 layer 选取后原样返回。
+ * null 返回 null；array 按 layer 选取（null 取 0 号默认）；其余值原样返回。
+ * 广泛适用于翻译、键命名、环境配置等按层切换的场景。
+ *
  * ```
- * container('#key', [
- *     'user'    => ['user:{id}', 'apcu' => 'user_cache:{id}', 'redis' => 'user:{id}'],
- *     'session' => ['sess:{token}'],
- *     'article' => 'art:{id}',
+ * // 翻译（框架内部使用）
+ * $msg = key('#ff.error.internal');                    // '服务器内部错误'
+ * $msg = key('#ff.error.internal', 'en_US');            // 'Internal server error'
+ *
+ * // 缓存键（按驱动选层）
+ * container('^#key', [
+ *     'user' => ['user:{id}', 'redis' => 'u:{id}', 'apcu' => 'uc:{id}'],
  * ]);
- * $key = key('user', ['id' => 123]);                    // 返回 'user:123'
- * $key = key('user', ['id' => 123], 'apcu');            // 返回 'user_cache:123'
- * $key = key('session', ['token' => 'abc'], 'redis');   // 返回 'sess:abc'（回退 0 号）
- * $key = key('article');                                // 返回 'art:{id}'
+ * $cacheKey = key('#key.user');                         // 'user:{id}'（默认）
+ * $cacheKey = key('#key.user', 'redis');                // 'u:{id}'（redis 层）
+ * $cacheKey = key('#key.user', 'apcu');                 // 'uc:{id}'（apcu 层）
+ *
+ * // 环境配置（按部署环境选层）
+ * container('^#cfg', [
+ *     'api_url' => ['https://api.example.com', 'staging' => 'https://staging.api.example.com'],
+ *     'debug'   => ['false', 'dev' => 'true'],
+ * ]);
+ * $apiUrl = key('#cfg.api_url', 'staging');             // 'https://staging.api.example.com'
+ * $debug  = key('#cfg.debug', 'dev');                   // 'true'
+ *
+ * // 未命中
+ * $val = key('#cfg.not_exists');                        // null
  * ```
- * @param string      $name    配置中的键名，或直接作为模板
- * @param array|null  $context 上下文数据，替换模板中 {placeholder}
- * @param string|null $layer   缓存层名称，null 表示使用默认模板
- * @return string 处理后的 key
+ *
+ * @param  string      $path  容器路径
+ * @param  string|null $layer 选取层，null 取 0 号默认
+ * @return mixed 有值原样返回，null 未命中
  */
-function key(string $name, ?array $context = null, ?string $layer = null): string{
-	$def = (array) ((container('#key') ?? [])[$name] ?? null);
-	$tpl = $def
-		? ($layer !== null ? ($def[$layer] ?? $def[0] ?? $name) : ($def[0] ?? $name))
-		: $name;
-	return $context
-		? preg_replace_callback('/\{(\w+)\}/', fn($m) => $context[$m[1]] ?? $m[0], $tpl)
-		: $tpl;
+function key(string $path, ?string $layer = null): mixed{
+	$entry = container($path);
+	if($entry === null) return null;
+	if(is_array($entry)) return $entry[$layer] ?? $entry[0] ?? null;
+	return $entry;
 }

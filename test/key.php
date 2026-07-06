@@ -3,23 +3,26 @@ include __DIR__ . "/../vendor/autoload.php";
 
 use function ff\{container, test, key};
 
-container('#key', [
-	'user'    => ['user:{id}', 'apcu' => 'user_cache:{id}', 'redis' => 'user:{id}'],
-	'session' => ['sess:{token}'],
-	'token'   => ['redis' => 'token:{uid}'],
-	'article' => 'art:{id}',
+container('^#kt', [
+	'greet' => 'hello',
+	'user'  => ['default_user', 'admin' => 'admin_user', 'vip' => 'vip_user'],
+	'role'  => ['guest'],
+	'fall'  => ['main', 'en' => 'english', 'zh' => 'chinese'],
+	'count' => 42,
+	'active'=> true,
 ]);
 
-test('0号默认模板', fn() => key('user', ['id' => 123]), 'user:123');
-test('指定层存在', fn() => key('user', ['id' => 1], 'apcu'), 'user_cache:1');
-test('另一指定层存在', fn() => key('user', ['id' => 1], 'redis'), 'user:1');
-test('指定层不存在回退0号', fn() => key('session', ['token' => 'abc'], 'redis'), 'sess:abc');
-test('指定层不存在无0号返回key名', fn() => key('token', ['uid' => 5], 'apcu'), 'token');
-test('无layer有0号', fn() => key('session'), 'sess:{token}');
-test('无layer无0号返回key名', fn() => key('token'), 'token');
-test('具体层', fn() => key('token', ['uid' => 5], 'redis'), 'token:5');
-test('字符串简写', fn() => key('article'), 'art:{id}');
-test('未配置key', fn() => key('un_config'), 'un_config');
-test('未配置内联模板', fn() => key('xx:{id}', ['id' => 456]), 'xx:456');
-test();
+test('字符串直接返回', fn() => key('#kt.greet'), 'hello');
+test('数组返回0号', fn() => key('#kt.role'), 'guest');
+test('数组返回0号默认', fn() => key('#kt.user'), 'default_user');
+test('指定层admin', fn() => key('#kt.user', 'admin'), 'admin_user');
+test('指定层vip', fn() => key('#kt.user', 'vip'), 'vip_user');
+test('指定层en', fn() => key('#kt.fall', 'en'), 'english');
+test('指定层zh', fn() => key('#kt.fall', 'zh'), 'chinese');
+test('层不存在回退0号', fn() => key('#kt.user', 'nonexist'), 'default_user');
+test('路径不存在返回null', fn() => key('#kt.nonexist'), null);
+test('路径不存在指定层返回null', fn() => key('#kt.nonexist', 'x'), null);
+test('int 原样返回', fn() => key('#kt.count'), 42);
+test('bool 原样返回', fn() => key('#kt.active'), true);
 
+test();

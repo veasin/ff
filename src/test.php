@@ -58,16 +58,16 @@ function test(?string $label = null, mixed $value = null, mixed $assign = null):
 			if($expect === true) $passed++;
 			else $failed[] = [$label, $actual, $assign];
 		}
-		if(empty($failed)) echo $render(i18n('#test:passed', ['passed' => $passed, 'total' => $total])) , "\n";
+		if(empty($failed)) echo $render(i18n('#ff.test.passed', ['passed' => $passed, 'total' => $total])) , "\n";
 		else{
 			foreach($failed as [$label, $actual, $assign]){
 				$actualOut = $actual instanceof \Throwable ? $actual->getMessage() : json_encode($actual, JSON_UNESCAPED_UNICODE);
 				if($assign instanceof \Throwable) $expectOut = $assign->getMessage();
 				elseif(is_callable($assign)) $expectOut = 'assertion';
 				else $expectOut = json_encode($assign, JSON_UNESCAPED_UNICODE);
-				echo $render(i18n('#test:case', ['label' => $label, 'expected' => $expectOut, 'actual' => $actualOut,])) , "\n";
+				echo $render(i18n('#ff.test.case', ['label' => $label, 'expected' => $expectOut, 'actual' => $actualOut,])) , "\n";
 			}
-			echo $render(i18n('#test:failed', ['count' => count($failed), 'passed' => $passed, 'total' => $total])) , "\n";
+			echo $render(i18n('#ff.test.failed', ['count' => count($failed), 'passed' => $passed, 'total' => $total])) , "\n";
 		}
 		$cases = [];
 		return;
