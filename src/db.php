@@ -15,7 +15,13 @@ use function ff\resource\pdo;
  * $stmt = db('SELECT * FROM users', true);                       // 返回 PDOStatement
  * db('BEGIN'); db('COMMIT'); db('ROLLBACK');                    // 事务
  * ```
- * 模式: row|list|value|column|pairs|group|id|count|ok|true|callable
+ * 参数 $mode 按类型分组：
+ * - string: `row` 单行数组, `list` 所有行, `value` 单值, `column` 单列, `pairs` 键值对, `group` 分组, `id` 自增ID, `count` 影响行数, `ok` 成功确认, `exec` 多语句执行
+ * - int: 自定义 PDO fetch 模式（如 PDO::FETCH_ASSOC）
+ * - true: 返回 PDOStatement
+ * - callable: 自定义处理函数 fn($stmt, $pdo) => mixed
+ * exec 模式：不经过预处理直接执行，失败返回 null，DDL 返回 true，有行数返回 int。
+ * MySQL 多语句需在配置 options 中设置 PDO::MYSQL_ATTR_MULTI_STATEMENTS => true。
  * 连接委托 resource\pdo() 管理，通过 container('#db.{configName}') 配置，默认配置名 default
  * @param object|string                       $sql        SQL 语句或 SQL helper 对象
  * @param array|string|int|callable|bool|null $params     参数数组；传入字符串/整数/可调用/bool/null 时作为 mode
@@ -33,8 +39,8 @@ function db(object|string $sql, array|string|int|callable|bool|null $params = []
 	if(in_array($sqlUpper, ['BEGIN', 'START TRANSACTION', 'BEGIN TRANSACTION'])) return $pdo->beginTransaction();
 	if($sqlUpper === 'COMMIT') return $pdo->commit();
 	if($sqlUpper === 'ROLLBACK') return $pdo->rollback();
-	if(str_starts_with($sqlUpper, 'SAVEPOINT ') || str_starts_with($sqlUpper, 'ROLLBACK TO SAVEPOINT ')) return $pdo->exec($sql);
 	try{
+		if($mode === 'exec') return match($r = $pdo->exec($sql)){ false => null, 0 => true, default => $r };
 		$stmt = $pdo->prepare($sql);
 		if(!$stmt->execute($params)) return null;
 		return match (true) {

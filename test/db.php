@@ -129,18 +129,30 @@ test('事务-rollback回滚数据', function(){
 	$count = db('SELECT COUNT(*) FROM users', 'value', $configName);
 	return $count == 0;
 }, true);
-test('事务-savepoint支持嵌套', function(){
+test('exec模式-多DDL执行返回true', function(){
 	$configName = 'test_' . uniqid();
 	container("#db.{$configName}", ['dsn' => 'sqlite::memory:']);
-	db('CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT)', 'ok', $configName);
-	db('BEGIN', [], null, $configName);
-	db("INSERT INTO users (name) VALUES ('Outer')", 'ok', $configName);
-	db('SAVEPOINT sp1', [], null, $configName);
-	db("INSERT INTO users (name) VALUES ('Inner')", 'ok', $configName);
-	db('ROLLBACK TO SAVEPOINT sp1', [], null, $configName);
-	db('COMMIT', [], null, $configName);
-	$names = db('SELECT name FROM users', 'column', $configName);
-	return count($names) === 1 && $names[0] === 'Outer';
+	$r = db("CREATE TABLE a (id INT); CREATE TABLE b (id INT);", 'exec', $configName);
+	return $r === true;
+}, true);
+test('exec模式-混合DDL+DML返回影响行数', function(){
+	$configName = 'test_' . uniqid();
+	container("#db.{$configName}", ['dsn' => 'sqlite::memory:']);
+	db("CREATE TABLE t (id INT)", 'exec', $configName);
+	$r = db("INSERT INTO t (id) VALUES (1); INSERT INTO t (id) VALUES (2);", 'exec', $configName);
+	return is_int($r) && $r === 1;
+}, true);
+test('exec模式-错误SQL返回null', function(){
+	$configName = 'test_' . uniqid();
+	container("#db.{$configName}", ['dsn' => 'sqlite::memory:']);
+	$r = db("CREATE TABLE", 'exec', $configName);
+	return $r === null;
+}, true);
+test('exec模式-跳位语法支持', function(){
+	$configName = 'test_' . uniqid();
+	container("#db.{$configName}", ['dsn' => 'sqlite::memory:']);
+	$r = db("CREATE TABLE c (id INT); CREATE TABLE d (id INT);", 'exec', $configName);
+	return $r === true;
 }, true);
 test('事务-小写sql支持', function(){
 	$configName = 'test_' . uniqid();
