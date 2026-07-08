@@ -18,6 +18,15 @@
   "require-dev":{
     "veasin/ff-sql":">=0.1.0"
   },
+  "suggest":{
+    "veasin/ff-franken":"FrankenPHP worker mode adapter",
+    "veasin/ff-llm":"Unified LLM chat interface with multi-provider switching and tool calling",
+    "veasin/ff-log-ws":"WebSocket real-time log transport",
+    "veasin/ff-sql":"SQL query builder, DDL generation, and database migration",
+    "veasin/ff-redis":"Redis connection pool, queue driver, and cache driver",
+    "veasin/ff-web":"Web middleware collection — CORS, CSRF, gzip, JSON, logging, rate limiter, static file serving, and auth",
+    "veasin/ff-xdebug":"Xdebug trace viewer with formatted timeline table"
+  },
   "autoload":{
     "psr-4":{
       "ff\\":"src/"
@@ -52,18 +61,6 @@
       "src/http/stream.php",
       "src/log.php",
       "src/log/error.php",
-      "src/middleware/prefab/auth/basic.php",
-      "src/middleware/prefab/auth/token.php",
-      "src/middleware/prefab/auth/jwt.php",
-      "src/middleware/prefab/auth/apikey.php",
-      "src/middleware/prefab/cors.php",
-      "src/middleware/prefab/csrf.php",
-      "src/middleware/prefab/error.php",
-      "src/middleware/prefab/gzip.php",
-      "src/middleware/prefab/json.php",
-      "src/middleware/prefab/log.php",
-      "src/middleware/prefab/rate.php",
-      "src/middleware/prefab/serve.php",
       "src/route/rest.php",
       "src/queue.php",
       "src/queue/db.php",
