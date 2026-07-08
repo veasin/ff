@@ -34,3 +34,16 @@ composer require veasin/ff
 - [函数参考](doc/functions.md) — 所有内置函数的详细说明与示例
 - [预制中间件](doc/middlewares.md) — 所有内置中间件的详细说明与示例
 - [使用思路与最佳实践](doc/usage.md) — 框架使用思路与最佳实践指南
+
+### 生态
+
+ff 生态下的扩展项目：
+
+| 项目 | 说明 |
+|------|------|
+| [ff-franken](https://github.com/veasin/ff-franken) | FrankenPHP worker 模式适配器 |
+| [ff-llm](https://github.com/veasin/ff-llm) | LLM 统一聊天接口，多 provider 切换、Tool Calling |
+| [ff-log-ws](https://github.com/veasin/ff-log-ws) | WebSocket 日志实时传输 |
+| [ff-sql](https://github.com/veasin/ff-sql) | SQL 查询构建器、DDL 生成与数据库迁移 |
+| [ff-redis](https://github.com/veasin/ff-redis) | Redis 连接池、队列驱动与缓存驱动 |
+| [ff-xdebug](https://github.com/veasin/ff-xdebug) | Xdebug 追踪查看器，格式化表格展示调用时间线 |

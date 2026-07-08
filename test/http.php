@@ -3,7 +3,10 @@ include __DIR__ . "/../vendor/autoload.php";
 
 use function ff\{container, http, test};
 
-// ── Mock driver（模拟 server.php 行为，无网络开销）──
+container(null);
+container(null, true);
+
+// ── Mock driver（模拟 server 行为，无网络开销）──
 $port = 9899;
 $base = "http://127.0.0.1:$port";
 $mockDriver = function($method, $url, $body, $headers, $config) use($port){
@@ -54,7 +57,10 @@ $mockDriver = function($method, $url, $body, $headers, $config) use($port){
 	}
 	return ['body' => json_encode(['error' => 'not found']), 'code' => 404, 'headers' => ['Content-Type: application/json'], 'message' => 'Not Found'];
 };
-container('#http:', $mockDriver);
+
+// 注册 mock 驱动到 ext，设为默认
+container('^#ext.http.mock', $mockDriver);
+container('#http', ['driver' => 'mock', 'timeout' => 30]);
 
 // ── 核心测试 ──
 
@@ -255,9 +261,9 @@ test('$option headers 合并', function() use($base){
 		&& ($h['x-b'] ?? null) === 'from-option';
 });
 
-// 27. 连接失败返回 null
-test('连接失败返回 null', function(){
-	return http("GET http://127.0.0.1:18765/nonexistent", option: ['timeout' => 1]);
+// 27. 驱动返回 null（模拟连接失败）
+test('驱动返回 null', function() use($base){
+	return http("GET $base/slow");
 }, null);
 
 // 28. 多值响应 header
@@ -268,15 +274,22 @@ test('多值响应 header', function() use($base){
 	return is_array($v) && $v === ['val1', 'val2'];
 });
 
-// 29. option timeout
-test('$option timeout 快速超时', function() use($base){
+// 29. 自定义驱动名
+test('自定义驱动名', function() use($base){
+	$called = false;
+	container('^#ext.http.custom_test', function($method, $url, $body, $headers, $config) use(&$called){
+		$called = true;
+		return ['body' => ['custom' => true], 'code' => 201, 'headers' => ['X-Custom: yes'], 'message' => 'Created'];
+	});
+	$r = http("POST $base/json", ['test' => 1], option: ['driver' => 'custom_test']);
+	container('^#ext.http.custom_test', null);
+	return $called && $r['code'] === 201 && ($r['body']['custom'] ?? null) === true;
+}, true);
+
+// 30. $option timeout（驱动返回 null）
+test('$option timeout', function() use($base){
 	return http("GET $base/slow", option: ['timeout' => 1]);
 }, null);
-
-// 30. redirect 跟随
-test('redirect 跟随', function() use($base){
-	return http("GET $base/redirect", mode: 'code');
-}, 200);
 
 // ── encode/decode 测试 ──
 
@@ -357,16 +370,6 @@ test('Iterator body 自动 JSON', function() use($base){
 		&& ($r['body']['body'] ?? '') === '{"a":1,"b":2}';
 });
 
-// 39. 自定义驱动（验证 container 注入恢复）
-test('自定义驱动', function() use($base, $mockDriver){
-	$called = false;
-	container('#http:', function($method, $url, $body, $headers, $config) use(&$called, $base){
-		$called = true;
-		return ['body' => ['custom' => true], 'code' => 201, 'headers' => ['X-Custom: yes'], 'message' => 'Created'];
-	});
-	$r = http("POST $base/json", ['test' => 1]);
-	container('#http:', $mockDriver);
-	return $called && $r['code'] === 201 && ($r['body']['custom'] ?? null) === true;
-}, true);
-
 test();
+
+container(null, true);

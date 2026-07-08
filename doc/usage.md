@@ -22,9 +22,23 @@ container(set) → [ input() → { 业务 } → output() ]
 | 单一路口不够 | `route()` — 多分支路由 |
 | 输入需要更细控制 | `from()` + `filter()` 替代 `input()` |
 | 业务需要数据库 | `db()` |
-| 业务需要缓存 | `apcu()` / `redis()` — 缓存驱动；`cache()` — 编排缓存流程 |
+| 业务需要缓存 | `apcu()` — 缓存驱动；`cache()` — 编排缓存流程 |
 | 业务需要日志 | `log()` |
 | 流程需要复杂组织 | `middleware()` / `hump()` / `hook()` |
+
+---
+
+## callable 编写风格
+
+在 ff 生态中，callable 的写法按以下策略选择：
+
+| 场景 | 写法 | 示例 |
+|------|------|------|
+| **无参数** | 一级可调用 `\fn(...)` | `container('^#ext.queue.db', \ff\queue\db(...))` |
+| **有参数，单表达式** | 箭头函数 `fn() => ...` | `fn($cfg) => new PDO($cfg['dsn'])` |
+| **多行逻辑** | 闭包 | `function($next) use($cfg){ ... }` |
+
+**一级可调用**（PHP 8.1+ first-class callable）直接将函数引用为值，无参数时最简洁。**箭头函数**自动继承外层作用域，适合短表达式。**闭包**需要 `use` 手动导入变量，适合多行逻辑。
 
 ---
 
@@ -331,6 +345,7 @@ db('SELECT * FROM users', 'list', 'default');
 - 业务需要缓存时使用，`apcu()` 是进程内缓存，`redis()` 是跨进程共享缓存
 - PHP-FPM 下各进程 APCu 独立，跨进程共享用 `redis()`
 - `redis()` 连接失败后后续调用直接返回 null，不会重试
+  - 详见 [ff-redis](https://github.com/veasin/ff-redis)
 
 ```php
 apcu('key');                 // 读
@@ -349,9 +364,9 @@ redis('key', 'value', 60);  // 写 + TTL
 
 ```php
 $result = cache(
-    apcu('key', middleware: 60),    // 第一级 APCu
+    apcu('key', middleware: 60),  // 第一级 APCu
     redis('key', middleware: 60),   // 第二级 Redis
-    fn($next) => db('SELECT ...'),  // 回源，结果自动回填所有级
+    fn($next) => db('SELECT ...'), // 回源，结果自动回填所有级
 );
 ```
 

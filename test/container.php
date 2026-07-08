@@ -15,9 +15,10 @@ test('嵌套访问', container('nested.deep.value'), 'deep_value');
 // 测试 4: 删除操作
 container('test.key', null);
 test('删除操作', container('test.key'), null);
-// 测试 5: 清空容器
+// 测试 5: 清空请求级（持久 #ext 不受影响）
+container('temp.key', 'temp_val');
 container(null);
-test('清空容器', container(), []);
+test('清空请求级', container('temp.key'), null);
 // 测试 6: 存在性检查
 container('check.key', 'exists');
 test('存在性检查', container('check.key'), 'exists');

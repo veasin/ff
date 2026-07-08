@@ -4,13 +4,13 @@
 ---
 
 > **目录**
-> - [container](#container---容器方法) | [env](#env---环境变量读取) | [key](#key---结构化容器读取底层工具) | [name](#name---完整管道读取) | [args](#args---命令行参数解析) | [safe](#safe---安全调用)
-> - 资源连接：[pdo](#pdo---pdo-资源连接池) | [redis](#redis---redis-资源连接池)
+> - [container](#container---容器方法) | [ext](#ext---扩展驱动调用) | [env](#env---环境变量读取) | [key](#key---结构化容器读取底层工具) | [name](#name---完整管道读取) | [args](#args---命令行参数解析) | [safe](#safe---安全调用)
+> - 资源连接：[pdo](#pdo---pdo-资源连接池)
 > - 输入层：[input](#input---输入数据获取) | [from](#from---从指定来源获取原始值) | [filter](#filter---数据验证与转换)
 > - 输出层：[output](#output---输出数据)
 > - 流程控制：[route](#route---路由匹配) | [middleware](#middleware---中间件执行引擎) | [hump](#hump---链式中间件执行器) | [hook](#hook---钩子系统)
-> - 缓存：[cache](#cache---多级缓存链) | [apcu](#apcu---APCu-缓存驱动) | [redis](#redis---redis-缓存驱动)
-> - 队列：[queue](#queue---队列操作) | [redis](#redis---redis-队列驱动) | [db](#db---数据库队列驱动)
+> - 缓存：[cache](#cache---多级缓存链) | [apcu](#apcu---APCu-缓存驱动)
+> - 队列：[queue](#queue---队列操作) | [db](#db---数据库队列驱动)
 > - 数据库：[db](#db---数据库操作)
 > - HTTP客户端：[http](#http---http-请求)
 > - 国际化：[i18n](#i18n---多语言翻译)
@@ -38,6 +38,33 @@ container(['^persist.k' => 'v', 'request.k' => 'v']);//混合级别批量设置
 container('version', fn() => file_get_contents('version.txt'));//闭包工厂
 container('version*');//执行闭包返回结果
 container('plain*');//非闭包值忽略 *，返回 'string'
+```
+
+---
+
+## ext - 扩展驱动调用
+
+五种模式统一管理扩展驱动的注册与调用：
+
+```php
+ext('queue', 'db', $msg);                 // 1. 单驱 — 调指定 handler
+ext('log', true, $level, $msg);           // 2. 广播 — 全部调，收集 [name => result]
+ext('log', false, $level, $msg);          // 3. 遍历 — 全部调，不关心返回值
+ext('http', null, $method, $url);         // 4. 尝试 — 按序调，首个非 null 返回
+ext('http', ['stream', 'curl'], $url);    // 5. 指定序 — 按指定序调，首个非 null 返回
+```
+
+通过 `container()` 注册驱动，key 格式 `^#ext.{domain}.{name}`：
+
+```php
+// 按条注册（推荐）
+container('^#ext.http.curl', \ff\http\curl(...));
+
+// 批量注册
+container('^#ext.http', [
+    'curl'   => \ff\http\curl(...),
+    'stream' => \ff\http\stream(...),
+]);
 ```
 
 ---
@@ -191,37 +218,6 @@ $pdo = pdo('default');
 
 ---
 
-## redis - Redis 资源连接池
-
-按配置名管理 Redis 连接生命周期，支持惰性验证与自动重连。由 `cache\redis()` 和 `queue\redis()` 内部自动调用，也可直接使用。
-
-```php
-$redis = redis('default');   // 获取/创建默认连接
-$redis = redis('cache');     // 获取/创建指定配置连接
-redis(null);                  // 清空所有连接和失败标记
-```
-
-连接通过 `container("#redis.{name}")` 配置。默认 `$name = 'default'`，未配置时回退 `['host' => '127.0.0.1', 'port' => 6379]`。Redis 扩展不存在或连接失败返回 `null`。
-
-惰性验证：通过 `container('#resource.redis.ttl')` 设置验证间隔（秒），超时后自动执行 `ping()` 检测连接健康，断连时自动重建。默认 `0` 不验证。
-
-Swoole 协程版 Redis（通过自定义工厂注入）：
-```php
-container('#resource/redis:', fn($config) => {
-    $c = new \Swoole\Coroutine\Redis();
-    $c->connect($config['host'], $config['port'] ?? 6379);
-    return $c;
-});
-$redis = redis('default');
-```
-
-容器配置：
-- **`#redis.{name}`**: `array` - Redis 连接配置，支持 `host`、`port`、`password`、`database`、`timeout`
-- **`#resource.redis.ttl`**: `int` - 连接验证间隔秒数，默认 `0` 不验证
-- **`#resource/redis:`**: `callable` - 自定义 Redis 工厂，签名 `fn(array $config): \Redis`
-
----
-
 **输入层**
 
 ## input - 输入数据获取
@@ -317,24 +313,22 @@ output();//无参触发发送
 - **`message`**: `string` 默认 `''` HTTP 状态消息
 - **`pretty`**: `bool` 默认 `false` JSON 是否美化输出
 
-容器配置：
-- **`#out.type.{name}`**: `callable` - 扩展输出格式，签名 `fn(array $response): array`
-- **`#out.callback`**: `callable` - 自定义渲染回调，签名 `fn($response) => ...`
+格式驱动通过 ext 系统注册，内置 `json`/`view`/`file`/`http`。自定义格式注册方式：
 
 ```php
-//扩展输出格式
-container('#out.type.xml', function(array $response): array {
+// 注册自定义 xml 格式
+container('^#ext.output.xml', function(array $response): array {
     $response['headers']['Content-Type'] = 'application/xml';
     $response['body'] = xml_encode($response['body']);
     return $response;
 });
 output($data, ['type' => 'xml']);
-
-//自定义渲染回调
-container('#out.callback', function($response) {
-    echo json_encode($response['body']);
-});
 ```
+
+容器配置：
+- **`#out.default`**: `string` 默认 `'json'` 默认输出格式
+- **`#out.emit`**: `callable` 自定义 emit 函数，签名 `fn(array $response): void`
+- **`#out.callback`**: `callable` 自定义渲染回调（在 output/http.php 中使用），签名 `fn($response) => ...`
 
 ---
 
@@ -643,47 +637,20 @@ cache(apcu('key', 'fallback', middleware: true), fn($next) => null);
 
 ---
 
-## redis - Redis 缓存驱动
-
-签名与 `apcu()` 完全一致，支持 CRUD 和中间件工厂两种模式。
-
-```php
-redis('key');//单键读取
-redis('key', 'value');//单键写入
-redis('key', null);//单键删除
-redis('key', 'value', 60);//写入 + TTL
-redis('key', 'value', ['ttl' => 60, 'config' => 'cfg']);//写入 + TTL + 配置名
-redis('key', 'value', 'cfg');//写入 + 配置名（string 简写）
-redis(['k1', 'k2']);//批量读取
-redis(['k1' => 'v1']);//批量写入
-```
-
-中间件工厂模式：
-```php
-cache(redis('key', middleware: true), fn($next) => expensiveOp());
-cache(redis('key', 'fallback', middleware: 60), fn($next) => null);
-```
-
-容器配置：
-- **`cache.redis`**: `array` - Redis 连接配置，支持 `host`、`port`、`password`、`database`
-- **`#cache.redis.{name}`**: `array` - 命名配置，支持 `ttl`、`prefix`
-
----
-
 **队列**
 
 ## queue - 队列操作
 
-统一队列入口，支持 Redis list 和数据库（SQLite/MySQL）两种驱动。
+统一队列入口，支持 Redis list([ff-redis](https://github.com/veasin/ff-redis)) 和数据库（SQLite/MySQL）两种驱动。
 第二参数为闭包时进入消费模式，否则为生产模式。
 
 ```php
 // ---- 生产消息 ----
-queue('orders', ['order_id' => 123]);                  // 默认驱动（Redis）
+queue('orders', ['order_id' => 123]);                    // 字符串消息
 queue('orders', 'plain text');                          // 字符串消息
-queue('orders', $msg, 'email');                        // 指定命名配置
-queue('orders', $msg, ['driver' => 'db']);             // 指定内联配置
-queue(['q1' => 'm1', 'q2' => 'm2']);                   // 批量生产
+queue('orders', $msg, 'email');                          // 指定命名配置
+queue('orders', $msg, ['driver' => 'db']);               // 指定内联配置
+queue(['q1' => 'm1', 'q2' => 'm2']);                     // 批量生产
 
 // ---- 消费消息 ----
 queue('orders', function($msg) {
@@ -695,28 +662,8 @@ queue('orders', function($msg) {
 ```
 
 配置：
-- **`#queue`**: `array` - 默认队列配置，指定 `driver`（`redis` 或 `db`）
-- **`#queue/redis`**: `array` - Redis 驱动配置（`config` 指定 `#redis.{name}` 连接名，`prefix`、`ttl`）
+- **`#queue`**: `array` - 默认队列配置，指定 `driver`（未指定时尝试 `'default'`，未注册则 ext 返回 null）
 - **`#queue/db`**: `array` - 数据库驱动配置（`table`、`config`、`db_type`）
-
----
-
-## redis - Redis 队列驱动
-
-Redis list 驱动的底层函数，可在 queue() 外独立使用。
-
-```php
-redis('orders', ['id' => 1]);                              // 生产
-redis('orders', fn($m) => true);                           // 消费
-redis('orders', fn($m) => true, ['timeout' => 10]);        // 消费指定超时
-```
-
-生产使用 `lPush + serialize`，消费使用 `brPop` 阻塞弹出。
-`timeout=0` 永久阻塞。
-
-容器配置：
-- **`#queue/redis`**: `array` - 配置，支持 `config`（`#redis.{name}` 连接名，默认 `default`）、`prefix`、`ttl`、`timeout`
-- **`#redis.{name}`**: `array` - Redis 连接配置（`host`、`port`、`password`、`database`、`timeout`、`prefix`），`#redis.default` 为默认
 
 ---
 
@@ -901,20 +848,25 @@ $headers = http('GET https://api.example.com/users', mode: 'headers'); // 只返
 **容器配置：**
 
 ```php
-// 全局 HTTP 配置
-container('#http', ['timeout' => 10, 'ssl_verify' => false]);
+// 全局 HTTP 配置（driver: null=尝试 curl→stream, 'curl'=强制, ['stream','curl']=指定序）
+container('#http', ['timeout' => 10, 'ssl_verify' => false, 'driver' => 'curl']);
 
 // 驱动特定配置（cURL 优先于全局）
 container('#http/curl', ['timeout' => 5, 'redirect' => 3]);
 
 // PHP stream 配置
 container('#http/stream', ['timeout' => 15]);
-
-// 自定义驱动（覆盖自动选择）
-container('#http:', fn($method, $url, $body, $headers, $config) => [
-    // 返回 ['body' => ..., 'code' => ..., 'headers' => [...], 'message' => '']
-]);
 ```
+
+驱动通过 ext 系统注册，内置 curl/stream。`driver` 值决定模式：
+
+| `driver` 值 | 模式 | 行为 |
+|---|---|---|
+| `null`（默认） | 尝试 | curl → stream，首个非 null 返回 |
+| `'curl'` | 单驱 | 只调 curl |
+| `'stream'` | 单驱 | 只调 stream |
+| `['stream','curl']` | 指定序 | 按序调，首个非 null 返回 |
+| `'custom'` | 单驱 | 自行注册 `^#ext.http.custom` |
 
 配置优先级：`$option` 调用时传参 > `#http/curl`/`#http/stream` 驱动配置 > `#http` 全局配置。
 
@@ -962,21 +914,25 @@ container('^i18n.lang', 'en_US');
 
 ## log - 日志函数
 
+广播到所有 ext 注册的 handler。默认无任何驱动，需自行注册 handler：
+
 ```php
-log('用户登录');//基础用法，默认 level 为 info
-log('发生错误', 'error');//指定 level
-log('用户 {name} 登录', ['name' => 'admin']);//{key} 占位符替换
-log('错误: {msg}', ['msg' => '连接失败'], 'error');//同时使用 context 和 level
-log(['a' => 1, 'b' => 2]);//非 string 消息自动 json
-log(new StringableClass());//支持 Stringable 对象
+log('用户登录');                                    // 默认 level info
+log('发生错误', 'error');                           // 指定 level
+log('用户 {name} 登录', ['name' => 'admin']);        // {key} 占位符替换
+log('错误: {msg}', ['msg' => '连接失败'], 'error');  // context + level
+log(['a' => 1, 'b' => 2]);                          // 非 string 消息自动 json
+log(new StringableClass());                          // 支持 Stringable 对象
 ```
 
-容器配置：
-- **`#log:`**: `object|callable` - PSR Logger 对象或闭包，签名 `fn($level, $message, $context)`
+通过 ext 注册驱动，key 格式 `^#ext.log.{name}`：
 
 ```php
-container('#log:', $psrLogger);//注入 PSR Logger
-container('#log:', fn($level, $message, $context) => ...);//注入闭包
+// 注册 error_log 驱动（含 {placeholder} 替换）
+container('^#ext.log.error', \ff\log\error(...));
+
+// 多个 handler 同时接收广播
+container('^#ext.log.file', fn($level, $message, $context) => file_put_contents('app.log', "[$level] $message\n", FILE_APPEND));
 ```
 
 ---

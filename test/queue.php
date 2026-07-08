@@ -9,7 +9,6 @@ container("#db.{$cfg}", ['dsn' => 'sqlite::memory:']);
 
 test('queue函数存在', fn() => function_exists('ff\queue'), true);
 test('db驱动函数存在', fn() => function_exists('ff\queue\db'), true);
-test('redis驱动函数存在', fn() => function_exists('ff\queue\redis'), true);
 test('null入参返回null', fn() => queue(null), null);
 
 // ========== 配置解析 ==========

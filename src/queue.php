@@ -2,12 +2,10 @@
 declare(strict_types=1);
 namespace ff;
 
-use function ff\queue\redis;
-use function ff\queue\db;
-
 /**
- * 队列操作函数，支持 Redis list 和数据库队列。
- * 第二参数为闭包时进入消费模式，否则为生产模式。
+ * 队列操作函数。第二参数为闭包时进入消费模式，否则为生产模式。
+ * 未指定驱动时默认尝试 `'default'`，未注册时 ext 返回 null。
+ * 可通过 `#queue` 容器配置指定驱动：
  * ```
  * // ---- 生产 ----
  * queue('orders', ['order_id' => 123]);                    // 推入消息
@@ -26,7 +24,6 @@ use function ff\queue\db;
  * ```
  * 配置:
  * - `#queue`          — 默认队列配置（指定 driver 等）
- * - `#queue/redis`    — Redis 驱动配置（config/prefix/ttl）
  * - `#queue/db`       — 数据库驱动配置（table/config/db_type）
  * @param string|array|null  $queue   队列名；传入 array 时批量生产
  * @param mixed              $message 消息内容；Closure 时进入消费模式
@@ -40,15 +37,11 @@ function queue(string|array|null $queue = null, mixed $message = null, string|ar
 		foreach($queue as $k => $v) $r[$k] = queue($k, $v, $option);
 		return $r;
 	}
-	$base = container('#queue') ?? ['driver' => 'redis'];
+	$base = container('#queue') ?? ['driver' => 'default'];
 	$config = match (true) {
 		is_string($option) => array_merge($base, container("#queue.{$option}") ?? []),
 		is_array($option)  => array_merge($base, $option),
 		default            => $base,
 	};
-	return match ($config['driver'] ?? 'redis') {
-		'redis' => redis($queue, $message, $config),
-		'db'    => db($queue, $message, $config),
-		default => null,
-	};
+	return ext('queue', $config['driver'] ?? 'default', $queue, $message, $config);
 }

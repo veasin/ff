@@ -27,6 +27,7 @@
       "src/test.php",
       "src/env.php",
       "src/container.php",
+      "src/ext.php",
       "src/filter.php",
       "src/args.php",
       "src/from.php",
@@ -45,12 +46,12 @@
       "src/db.php",
       "src/cache.php",
       "src/cache/apcu.php",
-      "src/cache/redis.php",
       "src/safe.php",
       "src/http.php",
       "src/http/curl.php",
       "src/http/stream.php",
       "src/log.php",
+      "src/log/error.php",
       "src/middleware/prefab/auth/basic.php",
       "src/middleware/prefab/auth/token.php",
       "src/middleware/prefab/auth/jwt.php",
@@ -65,10 +66,9 @@
       "src/middleware/prefab/serve.php",
       "src/route/rest.php",
       "src/queue.php",
-      "src/queue/redis.php",
       "src/queue/db.php",
       "src/resource/pdo.php",
-      "src/resource/redis.php"
+      "bootstrap.php"
     ]
   }
 }

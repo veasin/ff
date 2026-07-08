@@ -3,7 +3,7 @@ declare(strict_types=1);
 namespace ff;
 
 use ff\output\status;
-use function ff\output\{type\file, type\json, type\view, http};
+use function ff\output\http;
 
 /**
  * 输出数据，支持多种格式和模板。
@@ -49,13 +49,7 @@ function output(mixed $data = null, array|int|string|null $set = null): null{
 	static $render = function(){
 		$response = container('#out.response');
 		$type = $response['type'] ?? container('#out.default') ?? 'json';
-		$format = container("#out.type.$type") ?? match ($type) {
-			'json' => json(...),
-			'view' => view(...),
-			'file' => file(...),
-			default => null,
-		};
-		$response = $format ? $format($response) : $response;
+		$response = ext('output', $type, $response) ?? $response;
 		$emit = container('#out.emit') ?? (container('#mode:cli') ? function($r){
 			echo $r['body'] ?? '';
 			$code = $r['code'] ?? 200;
