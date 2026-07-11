@@ -41,6 +41,7 @@
       "src/args.php",
       "src/from.php",
       "src/input.php",
+      "src/output/cli.php",
       "src/output/http.php",
       "src/output/type/json.php",
 	  "src/output/type/file.php",

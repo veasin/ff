@@ -1,46 +1,125 @@
 <?php
 include __DIR__ . "/../vendor/autoload.php";
 
-use ff\output\status;
 use function ff\{container, output, test};
 
-output(['a' => 1, 'b' => 2], ['type' => 'json']);
-$r = container('#out.response');
-test('json body', $r['body'], ['a' => 1, 'b' => 2]);
-test('json code', $r['code'], 200);
-test('json type', $r['type'] === 'json', true);
-output('not found', 404);
-$r = container('#out.response');
-test('404 code', $r['code'], 404);
-test('404 type null', $r['type'] ?? null, null);
-output(status::NotFound);
-$r = container('#out.response');
-test('Status enum code', $r['code'], 404);
-test('Status enum body null', $r['body'], null);
-output('download', ['type' => 'file', 'file' => '/tmp/test.txt']);
-$r = container('#out.response');
-test('file type', $r['type'] === 'file', true);
-test('file path', $r['file'] === '/tmp/test.txt', true);
-$result = null;
-container('#out.emit', function($r) use (&$result){ $result = $r; });
-output(['name' => 'test'], ['type' => 'json']);
-output();
-test('pipeline json body', $result['body'], json_encode(['name' => 'test']));
-test('pipeline Content-Type', $result['headers']['Content-Type'] ?? '', 'application/json; charset=UTF-8');
-output(null, 204);
-container('#out.render', null);
-output();
-test('pipeline 204 body', $result['body'], null);
-output('err', 500);
-container('#out.render', null);
-output();
-test('pipeline 500 body', $result['body'], json_encode('err'));
-test('pipeline 500 code', $result['code'], 500);
-container('^#ext.output.html', fn(array $r): array => [...$r, 'body' => "<html><body>{$r['body']}</body></html>"]);
-output('hi', ['type' => 'html']);
-container('#out.render', null);
-output();
-test('pipeline custom format', $result['body'], '<html><body>hi</body></html>');
-container('#out.emit', null);
-container('^#ext.output.html', null);
+// 共享 cap emit：将捕获结果存入容器 key，避免文件级变量引用混乱
+container('^#ext.out.emit.cap', function(mixed $content, array $meta){
+	container('#out.captured', ['data' => $content, 'meta' => $meta]);
+});
+
+test('JSON 基本输出', function(){
+	container(null);
+	container('#out.emit', 'cap');
+	output(['a' => 1, 'b' => 2]);
+	output();
+	return container('#out.captured');
+}, function($v){
+	return $v['data'] === json_encode(['a' => 1, 'b' => 2])
+		&& $v['meta']['code'] === 200
+		&& ($v['meta']['headers']['Content-Type'] ?? '') === 'application/json; charset=UTF-8';
+});
+
+test('自定义状态码', function(){
+	container(null);
+	container('#out.emit', 'cap');
+	output('not found', 404);
+	output();
+	return container('#out.captured');
+}, function($v){
+	return $v['meta']['code'] === 404;
+});
+
+test('Status enum', function(){
+	container(null);
+	container('#out.emit', 'cap');
+	output(\ff\output\status::NotFound);
+	output();
+	return container('#out.captured');
+}, function($v){
+	return $v['meta']['code'] === 404 && $v['data'] === null;
+});
+
+test('视图模板简写', function(){
+	container(null);
+	container('#out.emit', 'cap');
+	output(['title' => 'Hello'], 'nonexistent.php');
+	output();
+	return container('#out.captured');
+}, function($v){
+	return ($v['meta']['type'] ?? null) === 'view'
+		&& ($v['meta']['file'] ?? null) === 'nonexistent.php';
+});
+
+test('文件输出', function(){
+	container(null);
+	container('#out.emit', 'cap');
+	output('download', ['type' => 'file', 'file' => '/tmp/test.txt']);
+	output();
+	return container('#out.captured');
+}, function($v){
+	return ($v['meta']['type'] ?? null) === 'file'
+		&& ($v['meta']['file'] ?? null) === '/tmp/test.txt';
+});
+
+test('204 空 body', function(){
+	container(null);
+	container('#out.emit', 'cap');
+	output(null, 204);
+	output();
+	return container('#out.captured');
+}, function($v){
+	return $v['data'] === null && $v['meta']['code'] === 204;
+});
+
+test('500 错误', function(){
+	container(null);
+	container('#out.emit', 'cap');
+	output('err', 500);
+	output();
+	return container('#out.captured');
+}, function($v){
+	return $v['data'] === json_encode('err') && $v['meta']['code'] === 500;
+});
+
+test('自定义 headers', function(){
+	container(null);
+	container('#out.emit', 'cap');
+	output('ok', ['headers' => ['X-Custom' => 'val']]);
+	output();
+	return container('#out.captured');
+}, function($v){
+	return ($v['meta']['headers']['X-Custom'] ?? '') === 'val';
+});
+
+test('自定义 format 扩展', function(){
+	container(null);
+	container('^#ext.out.type.uc', fn($data, $meta): ?array => [strtoupper((string)$data), $meta]);
+	container('#out.emit', 'cap');
+	output('hello', ['type' => 'uc']);
+	output();
+	container('^#ext.out.type.uc', null);
+	return container('#out.captured');
+}, function($v){
+	return $v['data'] === 'HELLO';
+});
+
+test('自定义 emit 扩展', function(){
+	$called = false;
+	container('^#ext.out.emit.test', function($content, $meta) use (&$called){ $called = true; });
+	container('#out.emit', 'test');
+	output('emit test');
+	output();
+	container('^#ext.out.emit.test', null);
+	return $called;
+}, true);
+
+test('无数据时 0 参静默跳过', function(){
+	container(null);
+	container('#out.emit', 'cap');
+	output();
+	return container('#out.captured');
+}, null);
+
 test();
+container('^#ext.out.emit.cap', null);

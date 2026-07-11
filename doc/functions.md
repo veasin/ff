@@ -291,44 +291,76 @@ filter('13800138000', 'phone');//返回 '13800138000'
 
 ## output - 输出数据
 
-支持多种格式和模板，核心签名 `output($data, $set)`。
+三阶段管道：**存储 → 格式化 → 发送**。`output($data, $set)` 存储数据，`output()` 无参触发格式化和发送。
 
 ```php
 output(['status' => 'ok']);//默认 JSON 输出
 output(null, 201);//只设置状态码（int 简写）
-output(Status::NotFound);//使用 Status enum
+output(Status::NotFound);//使用 Status enum → 404
 output($data, ['type' => 'json']);//指定格式
 output($data, ['type' => 'view', 'file' => 'template.php']);//视图模板
 output($data, ['type' => 'file', 'file' => '/path/to/photo.jpg']);//文件输出
 output($data, 'template.php');//视图模板 string 简写
 output(true, ['type' => 'file', 'file' => '/path/to/file.pdf']);//文件下载（Content-Disposition）
-output();//无参触发发送
+output();//无参触发发送（自动通过 hook 在 shutdown 时执行）
 ```
 
 **$set**：
-- **`code`**: `int` 默认 `200` HTTP 状态码
+- **`code`**: `int` 默认 `200` 状态码（HTTP → 状态码，CLI → exit code）
 - **`type`**: `string` 默认 `'json'` 输出格式，内置 `json`/`view`/`file`
 - **`file`**: `string` - 文件路径，`type=view` 时作模板，`type=file` 时作下载文件
-- **`headers`**: `array` 默认 `[]` HTTP 响应头键值对
-- **`message`**: `string` 默认 `''` HTTP 状态消息
+- **`headers`**: `array` 默认 `[]` 元数据键值对（HTTP 中作响应头，CLI 忽略）
+- **`message`**: `string` 默认 `''` 状态描述
 - **`pretty`**: `bool` 默认 `false` JSON 是否美化输出
 
-格式驱动通过 ext 系统注册，内置 `json`/`view`/`file`/`http`。自定义格式注册方式：
+### 格式驱动
+
+格式函数通过 ext 系统注册，签名 `fn(mixed $data, array $meta): array`，返回 `[$data, $meta]` 元组。内置 `json`/`view`/`file`：
 
 ```php
 // 注册自定义 xml 格式
-container('^#ext.output.xml', function(array $response): array {
-    $response['headers']['Content-Type'] = 'application/xml';
-    $response['body'] = xml_encode($response['body']);
-    return $response;
+container('^#ext.out.type.xml', function(mixed $data, array $meta): array {
+    $meta['headers'] = [...($meta['headers'] ?? []), 'Content-Type' => 'application/xml'];
+    return [xml_encode($data), $meta];
 });
 output($data, ['type' => 'xml']);
 ```
 
+### 发送驱动
+
+emit 函数通过 ext 系统注册，签名 `fn(mixed $content, array $meta): void`。内置 `http`/`cli`：
+
+```php
+// 注册自定义 emit（如写入文件）
+container('^#ext.out.emit.file', function(mixed $content, array $meta): void {
+    file_put_contents('/tmp/output.log', json_encode([$content, $meta]));
+});
+container('#out.emit', 'file');//切换到自定义 emit
+```
+
+### 格式与 emit 注册
+
+内置驱动在 `bootstrap.php` 中注册：
+
+```php
+container('^#ext.out', [
+    'type' => [
+        'json' => \ff\output\type\json(...),
+        'view' => \ff\output\type\view(...),
+        'file' => \ff\output\type\file(...),
+    ],
+    'emit' => [
+        'http' => \ff\output\http(...),
+        'cli'  => \ff\output\cli(...),
+    ],
+]);
+container('^#out', ['type' => 'json', 'emit' => PHP_SAPI === 'cli' ? 'cli' : 'http']);
+```
+
 容器配置：
-- **`#out.default`**: `string` 默认 `'json'` 默认输出格式
-- **`#out.emit`**: `callable` 自定义 emit 函数，签名 `fn(array $response): void`
-- **`#out.callback`**: `callable` 自定义渲染回调（在 output/http.php 中使用），签名 `fn($response) => ...`
+- **`#out.type`**: `string` 默认 `'json'` 默认输出格式
+- **`#out.emit`**: `string` 默认 `'http'` 当前 emit 标识，CLI 默认 `'cli'`
+- **`#out.op`**: `array` 存储 `[$data, $meta]` 元组，由 `output()` 自动管理
 
 ---
 

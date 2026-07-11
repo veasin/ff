@@ -13,8 +13,8 @@ test('rest - list 处理器带规则', function(){
 		'list' => ['name' => 'query,str', 'email' => 'query,email'],
 	]);
 	route(['user/' => $routes]);
-	return container('#out.response');
-}, ['body' => ['name' => 'test', 'email' => 'a@b.com'], 'code' => 200]);
+	return container('#out.op');
+}, [['name' => 'test', 'email' => 'a@b.com'], ['code' => 200]]);
 
 test('rest - list 处理器无规则', function(){
 	container(null);
@@ -23,8 +23,8 @@ test('rest - list 处理器无规则', function(){
 		'list' => fn($input) => [['ok']],
 	]);
 	route(['user/' => $routes]);
-	return container('#out.response');
-}, ['body' => ['ok'], 'code' => 200]);
+	return container('#out.op');
+}, [['ok'], ['code' => 200]]);
 
 test('rest - create 处理器返回 201', function(){
 	container(null);
@@ -36,8 +36,8 @@ test('rest - create 处理器返回 201', function(){
 		'create' => ['name' => 'str', 'email' => 'email'],
 	]);
 	route(['user/' => $routes]);
-	return container('#out.response');
-}, ['body' => ['name' => 'John', 'email' => 'john@test.com'], 'code' => 201]);
+	return container('#out.op');
+}, [['name' => 'John', 'email' => 'john@test.com'], ['code' => 201]]);
 
 test('rest - get 处理器自动提取参数', function(){
 	container(null);
@@ -46,8 +46,8 @@ test('rest - get 处理器自动提取参数', function(){
 		'get' => fn($input) => [$input],
 	]);
 	route(['user/' => $routes]);
-	return container('#out.response');
-}, ['body' => ['id' => '42'], 'code' => 200]);
+	return container('#out.op');
+}, [['id' => '42'], ['code' => 200]]);
 
 test('rest - get 处理器含参数验证', function(){
 	container(null);
@@ -58,8 +58,8 @@ test('rest - get 处理器含参数验证', function(){
 		'get' => ['id' => 'params,int'],
 	]);
 	route(['user/' => $routes]);
-	return container('#out.response');
-}, ['body' => ['id' => 42], 'code' => 200]);
+	return container('#out.op');
+}, [['id' => 42], ['code' => 200]]);
 
 test('rest - update 处理器合并参数和 body', function(){
 	container(null);
@@ -71,8 +71,8 @@ test('rest - update 处理器合并参数和 body', function(){
 		'update' => ['name' => 'str'],
 	]);
 	route(['user/' => $routes]);
-	return container('#out.response');
-}, ['body' => null, 'code' => 204]);
+	return container('#out.op');
+}, [null, ['code' => 204]]);
 
 test('rest - replace 处理器 (PUT)', function(){
 	container(null);
@@ -84,8 +84,8 @@ test('rest - replace 处理器 (PUT)', function(){
 		'replace' => ['name' => 'str', 'email' => 'email'],
 	]);
 	route(['user/' => $routes]);
-	return container('#out.response');
-}, ['body' => ['name' => 'Jane', 'email' => 'jane@test.com', 'id' => '7'], 'code' => 200]);
+	return container('#out.op');
+}, [['name' => 'Jane', 'email' => 'jane@test.com', 'id' => '7'], ['code' => 200]]);
 
 test('rest - delete 处理器', function(){
 	container(null);
@@ -94,8 +94,8 @@ test('rest - delete 处理器', function(){
 		'delete' => fn($input) => [null, 204],
 	]);
 	route(['user/' => $routes]);
-	return container('#out.response');
-}, ['body' => null, 'code' => 204]);
+	return container('#out.op');
+}, [null, ['code' => 204]]);
 
 test('rest - 自定义参数名', function(){
 	container(null);
@@ -104,8 +104,8 @@ test('rest - 自定义参数名', function(){
 		'get' => fn($input) => [$input],
 	], '{slug}');
 	route(['user/' => $routes]);
-	return container('#out.response');
-}, ['body' => ['slug' => 'abc'], 'code' => 200]);
+	return container('#out.op');
+}, [['slug' => 'abc'], ['code' => 200]]);
 
 test('rest - 未知 key 被忽略', function(){
 	container(null);
@@ -115,7 +115,9 @@ test('rest - 未知 key 被忽略', function(){
 		'unknown'=> fn($input) => ['should not appear'],
 	]);
 	route(['user/' => $routes]);
-	return container('#out.response');
-}, ['body' => [], 'code' => 200]);
+	return container('#out.op');
+}, [[], ['code' => 200]]);
 
-register_shutdown_function(fn() => container('#out.response', ['body' => null, 'code' => 200, 'type' => 'http']));
+register_shutdown_function(fn() => container('#out.op', ['data' => null, 'meta' => ['code' => 200]]));
+
+test();

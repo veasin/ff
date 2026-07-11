@@ -1,33 +1,32 @@
 <?php
 include __DIR__ . "/../../../vendor/autoload.php";
 
-use function ff\test;
-use function ff\output\type\file;
+use function ff\{ext, test};
 
-$testFile = __DIR__ . '/file_test.txt';
+// ——— file 读取内容 ———
+$testFile = sys_get_temp_dir() . '/ff_file_test_' . uniqid() . '.txt';
 file_put_contents($testFile, 'hello file');
 
-$response = ['body' => null, 'code' => 200, 'headers' => [], 'file' => $testFile];
-$result = file($response);
-test('file 读取内容', $result['body'], 'hello file');
+$result = ext('out.type', 'file', false, ['file' => $testFile, 'code' => 200]);
+test('file 读取内容', $result[0], 'hello file');
 
-$response = ['body' => null, 'code' => 200, 'headers' => [], 'file' => '/path/to/nonexistent'];
-$result = file($response);
-test('file 不存在 code', $result['code'], 404);
-test('file 不存在 body', $result['body'], '');
+// ——— file 不存在 ———
+$result = ext('out.type', 'file', false, ['file' => '/path/to/nonexistent', 'code' => 200]);
+test('file 不存在 code', $result[1]['code'], 404);
 
-$response = ['body' => null, 'code' => 200, 'headers' => [], 'file' => $testFile];
-$result = file($response);
-test('file Content-Type', isset($result['headers']['Content-Type']), true);
+// ——— file Content-Type ———
+$result = ext('out.type', 'file', false, ['file' => $testFile, 'code' => 200]);
+test('file Content-Type', isset($result[1]['headers']['Content-Type']), true);
 
-$response = ['body' => true, 'code' => 200, 'headers' => [], 'file' => $testFile];
-$result = file($response);
-test('file 下载 Content-Disposition', ($result['headers']['Content-Disposition'] ?? ''), 'attachment; filename="file_test.txt"');
-test('file 下载 Content-Length', isset($result['headers']['Content-Length']), true);
+// ——— file 下载模式 ———
+$result = ext('out.type', 'file', true, ['file' => $testFile, 'code' => 200]);
+test('file 下载 Content-Disposition', ($result[1]['headers']['Content-Disposition'] ?? ''), 'attachment; filename="' . basename($testFile) . '"');
+test('file 下载 Content-Length', isset($result[1]['headers']['Content-Length']), true);
 
-$response = ['body' => null, 'code' => 200, 'headers' => []];
-$result = file($response);
-test('file 无 path code', $result['code'], 404);
+// ——— file 无 path ———
+$result = ext('out.type', 'file', false, ['code' => 200]);
+test('file 无 path code', $result[1]['code'], 404);
+
+unlink($testFile);
 
 test();
-unlink($testFile);

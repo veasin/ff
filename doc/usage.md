@@ -96,9 +96,10 @@ $id = input('id', 'params', 'int');
 
 ### output()
 
-- 向客户端返回 JSON / 视图 / 文件，框架自动管理 Content-Type、状态码，shutdown 自动发送
-- 位于核心路径终点，每个请求最终都通过它返回
+- 三阶段管道：`output($data, $set)` 存储 → `output()` 触发格式化 → emit 发送
+- 自动通过 hook 在 shutdown 时发送（handler 末尾无需手动调 `output()`）
 - handler 末尾直接调，不需要 return；提前退出时需要 `return` 阻止后续代码
+- HTTP 下自动设置 Content-Type 和状态码，CLI 下自动映射 exit code
 
 ```php
 output(['status' => 'ok']);                 // JSON 200
@@ -108,6 +109,24 @@ return output(['error' => 'msg'], 400);      // 提前退出
 output($data, 'template.php');              // 视图
 output($data, ['type' => 'file', 'file' => 'photo.jpg']);  // 文件
 ```
+
+---
+
+### 模板渲染最小化
+
+极简页面可直接将 PHP 模板文件路径作为 route handler，基于 middleware 的文件解析自动执行 `require`。数据通过前置中间件的 `$next()` 传递，模板内用 `extract($args[0] ?? [])` 提取变量。
+
+```php
+route([
+    'GET:/' => [
+        fn($next) => $next(['items' => $items, 'title' => '首页']),
+        __DIR__ . '/templates/page.php',
+    ],
+]);
+// 模板中：extract($args[0] ?? []) 后直接使用 $items、$title
+```
+
+适用场景：不需要 JSON/file/自定义 status 的纯页面渲染。需要状态码、Content-Type 控制或多格式输出时仍用 `output()`。
 
 ---
 
@@ -141,6 +160,8 @@ container('#env', __DIR__ . '/.env');
 ### route()
 
 需要多分支统一入口时使用，根据 method+path 分发到对应 handler。扩展在 `input()` 之上。
+
+**RESTful API 推荐使用 `route/rest()` 组织**：`rest()` 将 CRUD 语义（list/create/get/update/replace/delete）自动映射为 HTTP 方法，统一处理 input 规则和 output 调用，handler 只需返回 `[data, code]` 元组。见下方"大型项目的路由组织"详细说明。
 
 **推荐一次性数组形式**，所有路由定义集中在一个数组里，结构一致、易于嵌套。子映射数组中可以混合 int-key callable（中间件）和 string-key 子路由，解析规则：
 

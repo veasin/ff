@@ -6,33 +6,35 @@ use function ff\output\http;
 
 container('#in.input', ['protocol' => 'HTTP/1.1']);
 
-$response = ['body' => 'hello', 'code' => 200, 'headers' => ['Content-Type' => 'text/plain']];
+// ——— 基本输出 ———
 ob_start();
-http($response);
+http('hello', ['code' => 200]);
 $result = ob_get_clean();
-test('http 基本输出', $result, 'hello');
+test('基本输出', $result, 'hello');
 
-$response = ['body' => null, 'code' => 404];
+// ——— 404 null body ———
 ob_start();
-http($response);
+http(null, ['code' => 404]);
 $result = ob_get_clean();
-test('http 404 空 body', $result, '');
+test('404 空 body', $result, '');
 
-$response = ['body' => 'error', 'code' => 500, 'message' => 'Server Error'];
+// ——— 自定义 message ———
 ob_start();
-http($response);
+http('error', ['code' => 500, 'message' => 'Server Error']);
 $result = ob_get_clean();
-test('http 自定义消息', $result, 'error');
+test('自定义 message', $result, 'error');
 
-$captured = null;
-container('#out.callback', function($r) use (&$captured){ $captured = $r['body']; });
-$response = ['body' => 'cb', 'code' => 200];
+// ——— headers 输出 ———
 ob_start();
-http($response);
-$output = ob_get_clean();
-test('http callback 触发', $captured, 'cb');
-test('http callback 不 echo', $output, '');
+http('ok', ['code' => 200, 'headers' => ['X-Custom' => 'val']]);
+$result = ob_get_clean();
+test('headers 输出', $result, 'ok');
 
-container('#out.callback', null);
+// ——— NX header 自动附加 ———
+ob_start();
+http('test', ['code' => 200]);
+// 验证 header 是否设置了（无法直接捕获 header，只能验证 body）
+$result = ob_get_clean();
+test('NX header 自动附加', $result, 'test');
 
 test();

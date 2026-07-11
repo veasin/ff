@@ -5,17 +5,18 @@ namespace ff\output;
 use function ff\{container, from};
 
 /**
- * @param array $response
+ * @param mixed $content
+ * @param array $meta
  * @return void
  * @internal
  */
-function http(array $response): void{
-	$status = $response['code'] ?? (null !== ($response['body'] ?? null) ? 200 : 404);
-	$message = " $status " . ($response['message'] ?? '');
+function http(mixed $content, array $meta): void{
+	$status = $meta['code'] ?? ($content !== null ? 200 : 404);
+	$message = " $status " . ($meta['message'] ?? '');
 	if(!headers_sent()){
-		header((from('protocol', 'input') ?? "HTTP/1.1") . $message);
+		header((from('protocol', 'input') ?? 'HTTP/1.1') . $message);
 		header_remove('X-Powered-By');
-		$headers = $response['headers'] ?? [];
+		$headers = $meta['headers'] ?? [];
 		$headers['NX'] = 'V 2005-' . date('Y');
 		$is_list = array_is_list($headers);
 		foreach($headers as $header => $value){
@@ -32,7 +33,5 @@ function http(array $response): void{
 			else header($header . ': ' . $value);
 		}
 	}
-	$callback = container('#out.callback') ?? null;
-	if(null !== $callback) $callback($response);
-	else echo $response['body'] ?? '';
+	if($content !== null) echo $content;
 }
