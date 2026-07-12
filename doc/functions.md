@@ -222,14 +222,173 @@ $pdo = pdo('default');
 
 ## input - 输入数据获取
 
-获取输入并验证，组合 `from()` + `filter()`。未指定来源时默认 `body`。
+批量获取输入数据并验证，组合 `from()` + null/empty 处理 + 类型转换 + 检查验证。未指定来源时默认 `body`。
 
 ```php
-$age = input('age', 'query', 'int', '>=18', '<=100');//单值：来源+规则
-$age = input('age', 'body,int,>=18,<=100');//单值：组合规则字符串
-$data = input(['id' => 'int,>0', 'name' => 'str']);//批量：map 数组+规则
-$list = input(['id', 'name'], 'body');//批量：list 数组+来源
+$input = input(['name' => ['str'], 'age' => ['int']]);                       // 基础用法
+$input = input(['name' => 'str,body', 'age' => 'int,body']);                 // 逗号分隔简写
+$input = input(['id' => ['int', 'query'], 'name' => ['str', 'body']]);      // 指定来源
+$input = input(['x' => ['str', 'key' => 'name']]);                          // key 规则
+$input = input(['x' => ['str', 'from' => fn($k) => $data[$k]]]);           // from 闭包
+$input = input(['id' => ['int', 'from' => new \ArrayObject([...])]]);       // from ArrayAccess
+$input = input([                                                             // null/empty 处理
+    'name'  => ['str', 'null' => 'remove'],
+    'title' => ['str', 'null' => 'throw'],
+    'sort'  => ['int', 'null' => 0],
+    'icon'  => ['str', 'empty' => 'remove'],
+]);
+$input = input(['name' => ['str']], ['from' => 'body', 'null' => 0]);      // 默认规则
+$input = input(['age' => ['int', '>=:18']]);                                // check 规则
 ```
+
+**规则格式：**
+
+- **数组**：`['type', 'from', 'key', 'null', 'empty', 'error', callable, ...]`
+- **字符串**：逗号分隔，如 `'int,body'`、`'str,null:0'`
+- **闭包**（整数 key）：直接作为 check 规则
+- **命名 key 闭包**（如 `'from' => fn(...)`）：作为对应配置项
+
+**内置规则：**
+
+| 规则 | 说明 |
+|---|---|
+| `type` | 类型转换，从 `#input.type.{name}` 获取 |
+| `from` | 来源，支持 string/callable/ArrayAccess |
+| `key` | lookup key，覆盖字段名作为来源的 key |
+| `null` | null 值处理：简写/完整格式 |
+| `empty` | 空值处理：简写/完整格式 |
+| `default` | 默认值规则，null/empty fail=default 或 check fail=default 时回退取值 |
+| `error` | 异常配置：`string`/`int`/`['message','code','exception']` |
+| check | 验证规则，支持 bool 或 `[action, opts]` 返回 |
+
+**$defaults 默认规则集：**
+
+所有字段共享的默认规则，被每个字段的规则继承并覆盖。格式与 $set 相同，但只含配置键（`from`/`key`/`null`/`empty`/`default`/`error`/`type` + check），不含字段值。
+
+**from 来源：**
+
+- **string**：`'body'`/`'query'`/`'header'`/`'cookie'`/`'file'`/`'params'`/`'input'`
+- **callable**：`fn($key) => mixed`，接收 lookup key 返回值
+- **ArrayAccess**：`$arrayAccess[$key]`，直接用 `[]` 访问
+
+**key 规则：**
+
+指定来源中的 lookup key，覆盖字段名。当字段名 ≠ 数据 key 时使用。
+
+```php
+// 数据在 $_POST['user_name']，但字段叫 'name'
+input(['name' => ['str', 'key' => 'user_name']]);
+```
+
+**null/empty 处理：**
+
+支持简写和完整格式。内部统一转为 `{fail, default, error}` 结构。
+
+| 写法 | 解析结果 | 说明 |
+|---|---|---|
+| `'null' => 'remove'` | `{fail: 'remove'}` | 字段不计入结果 |
+| `'null' => 'throw'` | `{fail: 'throw'}` | 抛出异常 |
+| `'null' => 'default'` | `{fail: 'default'}` | 回退读取字段 `default` 规则 |
+| `'null' => 0` | `{fail: 'default', default: 0}` | 非关键词值作为默认值 |
+| `'null' => 'N/A'` | `{fail: 'default', default: 'N/A'}` | 字符串也作为默认值 |
+| `'null' => ['fail' => 'throw', 'error' => ['message' => '必填', 'code' => 400]]` | 完整格式 | fail 动作 + 默认值 + 异常配置 |
+
+完整格式结构：
+
+```php
+'null' => [
+    'fail'    => 'remove|throw|default',  // 失败动作
+    'default' => mixed,                   // fail=default 时的默认值
+    'error'   => mixed,                   // fail=throw 时的异常配置
+]
+```
+
+- `fail`：null/empty 时的动作
+- `default`：`fail=default` 时的值；未设置则回退读取字段 `default` 规则
+- `error`：`fail=throw` 时的异常配置；未设置则回退读取字段 `error` 规则
+
+`'0'` 和 `0` 不视为空值。
+
+**default 规则：**
+
+字段级默认值，null/empty 的 `fail=default` 或 check 的 `fail=default` 时，若对应结构中无 `default` 键，回退读取此值。
+
+```php
+input(['x' => ['str', 'null' => 'default', 'default' => 'fallback']]);
+// null 时 fail=default，结构中无 default → 读取 'default' 规则 → 'fallback'
+
+input(['x' => ['str', 'null' => ['fail' => 'default'], 'default' => 'fb']]);
+// 同上，完整格式
+
+input(['x' => ['str', 'empty' => 'default', 'default' => 'N/A']]);
+// empty 时同理
+```
+
+**error 配置：**
+
+指定 null/throw 或 check 失败时的异常信息。支持三种简写和完整格式。
+
+| 写法 | 解析结果 |
+|---|---|
+| `'error' => '错误信息'` | `['message' => '错误信息']` |
+| `'error' => 400` | `['code' => 400]` |
+| `'error' => ['message' => 'msg', 'code' => 400]` | 完整格式 |
+| `'error' => ['message' => 'msg', 'exception' => \InvalidArgumentException::class]` | 自定义异常类 |
+
+完整格式结构（对齐 nx filter）：
+
+```php
+'error' => [
+    'message'   => 'string',           // 异常消息
+    'code'      => int,                // 错误码
+    'exception' => \Exception::class,  // 异常类，默认 RuntimeException
+]
+```
+
+**error 继承规则：**
+
+null/empty 的 error 优先使用自身结构中的 error，未设置则回退读取字段级 error 规则：
+
+```php
+// null 的 error 覆盖字段 error
+input(['x' => ['str', 'null' => ['fail' => 'throw', 'error' => ['message' => '局部错误']], 'error' => ['message' => '全局错误']]]);
+// → 抛出 '局部错误'
+
+// null 无 error，继承字段 error
+input(['x' => ['str', 'null' => 'throw', 'error' => ['message' => '字段必填']]]);
+// → 抛出 '字段必填'
+```
+
+check 返回 `[throw, $opts]` 时，`$opts` 作为 error 直接解析（不嵌套在 `$opts['error']` 下）：
+
+```php
+// check 闭包返回格式
+fn($v) => ['throw', ['message' => 'too young', 'code' => 422]]
+fn($v) => ['default', ['value' => 99]]        // default 值从 value 或 default 键取
+fn($v) => ['pass', []]                         // 通过
+fn($v) => ['remove', []]                       // 移除字段
+```
+
+**类型转换：**
+
+通过 `#input.type.{name}` 注册转换闭包，转换失败（safe() 捕获）返回 null。
+
+**check 规则：**
+
+- **闭包**（整数 key）：直接作为验证函数
+- **命名 check**（字符串）：从 `#input.check.{name}` 获取，支持 `$name:$param` 格式
+- **返回值**：
+  - `bool`：`true` 通过，`false` 抛出异常
+  - `[action, $opts]`：支持 `'pass'`/`'throw'`/`'default'`/`'remove'`
+    - `'pass'`：通过
+    - `'throw'`：抛出异常，`$opts` 直接作为 error 解析（`['message' => ..., 'code' => ..., 'exception' => ...]`）
+    - `'default'`：使用 `$opts['default']` 或 `$opts['value']` 作为值，未设置回退字段 `default` 规则
+    - `'remove'`：字段不计入结果，跳过后续 check
+
+容器配置：
+- **`#input.type`**: `array` - 类型转换规则，格式 `[name => callable]`
+- **`#input.check`**: `array` - check 规则，格式 `[name => callable]`，签名 `fn($value, $param): bool|array`
+- **`#input.abbr`**: `array` - abbr 简写，格式 `[abbr => config]`
 
 ---
 
