@@ -6,6 +6,7 @@ use ff\output\status;
 
 /**
  * 输出数据，支持多种格式和环境。
+ * 支持 ext 扩展：domain='out.type'（格式化）和 'out.emit'（发送），handler 签名见 doc/functions.md。
  * 调用方式：
  * - 0 参：output()                             手动触发发送已有数据
  * - 1 参：output($data)                        输出数据（默认 JSON 格式）

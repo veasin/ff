@@ -5,6 +5,7 @@ namespace ff;
 /**
  * 队列操作函数。第二参数为闭包时进入消费模式，否则为生产模式。
  * 未指定驱动时默认尝试 `'default'`，未注册时 ext 返回 null。
+ * 支持 ext 扩展：domain='queue'，handler 签名 fn(string $queue, mixed $message, array $config): mixed，具体参数与返回值见 doc/functions.md。
  * 可通过 `#queue` 容器配置指定驱动：
  * ```
  * // ---- 生产 ----

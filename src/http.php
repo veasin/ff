@@ -19,6 +19,8 @@ namespace ff;
  * $code = http('GET https://...', mode: 'code');
  * $ok   = http('GET https://...', mode: 'ok');
  * ```
+ * 支持 ext 扩展：domain='http'，handler 签名 fn(string $method, string $url, ?string $body, array $headers, array $config): ?array，
+ * 返回 ['body'=>string, 'code'=>int, 'headers'=>array] 或 null，具体参数与返回值见 doc/functions.md。
  * encode 支持: null(CT自动)|'json'|'form'|Closure fn(mixed, 'encode'):?string
  * decode 支持: null(CT自动)|'json'|'form'|'raw'|Closure fn(string, 'decode'):mixed, 未设置时同 encode
  * @param string      $request 'METHOD url'，无空格默认 GET

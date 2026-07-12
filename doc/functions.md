@@ -252,6 +252,28 @@ $result = from(['id', 'name'], 'query');                 // list 批量读取
 $data  = from(['id' => 0, 'name' => '?'], 'query');      // map 批量读取 + 默认值兜底
 ```
 
+**ext 扩展点：**
+
+| domain | name | args | handler 签名 | 返回值 |
+|---|---|---|---|---|
+| `from` | `string` 来源名 | 无 | `fn(): array` | 来源关联数组 |
+
+- **name**：来源标识（`'body'`、`'header'` 或自定义来源名）
+- **handler 返回**：`array` — 该来源的关联数组，`from()` 内部统一处理 name 查找
+
+```php
+// 注册自定义来源
+container('^#ext.from.session', fn() => $_SESSION);
+$session = from('session', 'foo'); // → ext('from', 'session') → $_SESSION['foo']
+```
+
+内置驱动（`bootstrap.php` 注册）：
+
+| name | 函数 | 说明 |
+|---|---|---|
+| `body` | `\ff\from\body(...)` | 解析请求体，按 Content-Type 自动解析 JSON/form/multipart |
+| `header` | `\ff\from\header(...)` | 解析请求头，返回小写键名关联数组 |
+
 容器配置：
 - **`#in.input`**: `array` - 预置输入数据（`method`、`uri`、`params`）
 - **`#in.params`**: `array` - 预置路由参数
@@ -356,6 +378,26 @@ container('^#ext.out', [
 ]);
 container('^#out', ['type' => 'json', 'emit' => PHP_SAPI === 'cli' ? 'cli' : 'http']);
 ```
+
+**ext 扩展点：**
+
+| domain | name | args | handler 签名 | 返回值 |
+|---|---|---|---|---|
+| `out.type` | `string` 格式名 | `mixed $data, array $meta` | `fn(mixed $data, array $meta): array` | `[$content, $meta]` 元组 |
+| `out.emit` | `string` 发送名 | `mixed $content, array $meta` | `fn(mixed $content, array $meta): void` | `void` |
+
+- **out.type**：格式化数据，返回 `[mixed $content, array $meta]`，`$meta` 中 `headers` 等元信息会传给 emit
+- **out.emit**：发送最终内容到目标（HTTP 响应 / CLI 输出），无返回值
+
+内置驱动（`bootstrap.php` 注册）：
+
+| domain | name | 函数 | 说明 |
+|---|---|---|---|
+| `out.type` | `json` | `\ff\output\type\json(...)` | JSON 格式化 |
+| `out.type` | `view` | `\ff\output\type\view(...)` | 视图模板 |
+| `out.type` | `file` | `\ff\output\type\file(...)` | 文件输出 |
+| `out.emit` | `http` | `\ff\output\http(...)` | HTTP 响应发送 |
+| `out.emit` | `cli` | `\ff\output\cli(...)` | CLI 输出 + exit |
 
 容器配置：
 - **`#out.type`**: `string` 默认 `'json'` 默认输出格式
@@ -693,6 +735,26 @@ queue('orders', function($msg) {
 });
 ```
 
+**ext 扩展点：**
+
+| domain | name | args | handler 签名 | 返回值 |
+|---|---|---|---|---|
+| `queue` | `string` 驱动名 | `string $queue, mixed $message, array $config` | `fn(string $queue, mixed $message, array $config): mixed` | 生产：`bool`；消费：`true`/`false`/`null`/`int` |
+
+- **name**：驱动标识（`'default'`、`'db'` 或自定义驱动名），从 `$config['driver']` 取值
+- **handler 返回**：生产返回 `bool`（是否成功）；消费返回 `true`（ack）/ `false`（nack+重入队）/ `null`（nack+丢弃）/ `int`（延迟秒数后重试）
+
+```php
+container('^#ext.redis', fn(string $queue, mixed $message, array $config): mixed => ...);
+container('#queue', ['driver' => 'redis']);
+```
+
+内置驱动（`bootstrap.php` 注册）：
+
+| name | 函数 | 说明 |
+|---|---|---|
+| `db` | `\ff\queue\db(...)` | PDO 数据库队列驱动（SQLite/MySQL） |
+
 配置：
 - **`#queue`**: `array` - 默认队列配置，指定 `driver`（未指定时尝试 `'default'`，未注册则 ext 返回 null）
 - **`#queue/db`**: `array` - 数据库驱动配置（`table`、`config`、`db_type`）
@@ -877,6 +939,29 @@ $headers = http('GET https://api.example.com/users', mode: 'headers'); // 只返
 | `'raw'` | 保持原始字符串，不解码 |
 | `Closure` | `fn(string $raw, 'decode'): mixed` 自定义解码 |
 
+**ext 扩展点：**
+
+| domain | name | args | handler 签名 | 返回值 |
+|---|---|---|---|---|
+| `http` | `null`/`string`/`array` | `string $method, string $url, ?string $body, array $headers, array $config` | `fn(string, string, ?string, array, array): ?array` | `['body'=>string, 'code'=>int, 'headers'=>array]` 或 `null` |
+
+- **name**：`null`=尝试（curl→stream，首个非 null 返回），`string`=单驱，`array`=指定序（如 `['stream','curl']`）
+- **handler 返回**：`null` 表示连接失败（`http()` 返回 `null`）；非 null 须含 `body`/`code`/`headers` 键
+
+```php
+container('^#ext.http.guzzle', function(string $method, string $url, ?string $body, array $headers, array $config): ?array {
+    return ['body' => $body, 'code' => 200, 'headers' => []];
+});
+container('#http', ['driver' => 'guzzle']);
+```
+
+内置驱动（`bootstrap.php` 注册）：
+
+| name | 函数 | 说明 |
+|---|---|---|
+| `curl` | `\ff\http\curl(...)` | cURL 驱动（优先） |
+| `stream` | `\ff\http\stream(...)` | PHP stream 驱动（兜底） |
+
 **容器配置：**
 
 ```php
@@ -966,6 +1051,15 @@ container('^#ext.log.error', \ff\log\error(...));
 // 多个 handler 同时接收广播
 container('^#ext.log.file', fn($level, $message, $context) => file_put_contents('app.log', "[$level] $message\n", FILE_APPEND));
 ```
+
+**ext 扩展点：**
+
+| domain | name | args | handler 签名 | 返回值 |
+|---|---|---|---|---|
+| `log` | `false`（遍历） | `string $level, string\|array\|object $message, array $context` | `fn(string $level, string\|array\|object $message, array $context): void` | `void` |
+
+- **name**：`log()` 固定传 `false`（遍历所有已注册 handler）
+- **mode**：遍历（`false`），所有 handler 依次执行，不关心返回值
 
 ---
 

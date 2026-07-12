@@ -3,6 +3,7 @@ declare(strict_types=1);
 namespace ff;
 /**
  * 日志函数，广播到所有 ext 注册的 handler。默认无任何驱动，需自行注册。
+ * 支持 ext 扩展：domain='log'，handler 签名 fn(string $level, string|array|object $message, array $context): void，具体参数见 doc/functions.md。
  *
  * log 驱动 handler 接口形式（参照 PSR-3 LoggerInterface::log）：
  * ```

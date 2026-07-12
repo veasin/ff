@@ -4,6 +4,7 @@ namespace ff;
 /**
  * 从指定来源获取原始值。input() 内部调用此函数，也可独立使用获取未经验证的原始数据。
  * 内置来源：query|cookie|file|params|input，通过 ext 注册的来源：body|header，可扩展自定义来源。
+ * 支持 ext 扩展：domain='from'，handler 签名 fn(): array，具体参数与返回值见 doc/functions.md。
  * ```
  * $id = from('id', 'query');                                        // 从 Query 获取
  * $name = from('name', 'body');                                     // 从 Body 获取
