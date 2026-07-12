@@ -40,6 +40,8 @@
       "src/filter.php",
       "src/args.php",
       "src/from.php",
+      "src/from/header.php",
+      "src/from/body.php",
       "src/input.php",
       "src/output/cli.php",
       "src/output/http.php",

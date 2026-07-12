@@ -4,42 +4,42 @@ require __DIR__ . '/../vendor/autoload.php';
 use function ff\{container, input, route, test};
 
 test('路由 - 基础匹配', function(){
-	container("#in.input", ['method' => 'get', 'uri' => '/users/123', 'params' => null]);
+	container("#in.input", ['method' => 'get', 'uri' => '/users/123']);
 	return route('get:/users/{id}', fn($next) => true);
 }, ['get:/users/{id}']);
 test('路由 - 精确匹配', function(){
-	container("#in.input", ['method' => 'get', 'uri' => '/users', 'params' => null]);
+	container("#in.input", ['method' => 'get', 'uri' => '/users']);
 	return route('get:/users', fn($next) => true);
 }, ['get:/users']);
 test('路由 - GET方法匹配', function(){
-	container("#in.input", ['method' => 'get', 'uri' => '/users/123', 'params' => null]);
+	container("#in.input", ['method' => 'get', 'uri' => '/users/123']);
 	return route('get:/users/{id}', fn($next) => true);
 }, ['get:/users/{id}']);
 test('路由 - POST方法匹配', function(){
-	container("#in.input", ['method' => 'post', 'uri' => '/users', 'params' => null]);
+	container("#in.input", ['method' => 'post', 'uri' => '/users']);
 	return route('post:/users', fn($next) => true);
 }, ['post:/users']);
 test('路由 - 方法不匹配', function(){
-	container("#in.input", ['method' => 'post', 'uri' => '/users', 'params' => null]);
+	container("#in.input", ['method' => 'post', 'uri' => '/users']);
 	return route('get:/users', fn($next) => true);
 }, null);
 test('路由 - 参数提取', function(){
-	container("#in.input", ['method' => 'get', 'uri' => '/users/123', 'params' => null]);
+	container("#in.input", ['method' => 'get', 'uri' => '/users/123']);
 	return route('get:/users/{id}', fn($next) => input('id', 'params'));
 }, ['get:/users/{id}']);
 test('路由 - 多段参数', function(){
-	container("#in.input", ['method' => 'get', 'uri' => '/users/123/edit', 'params' => null]);
+	container("#in.input", ['method' => 'get', 'uri' => '/users/123/edit']);
 	return route('get:/users/{id}/{action}', fn($next) => [
 		'id' => input('id', 'params'),
 		'action' => input('action', 'params'),
 	]);
 }, ['get:/users/{id}/{action}']);
 test('路由 - 不匹配返回null', function(){
-	container("#in.input", ['method' => 'get', 'uri' => '/posts/123', 'params' => null]);
+	container("#in.input", ['method' => 'get', 'uri' => '/posts/123']);
 	return route('get:/users/{id}', function($next){});
 }, null);
 test('路由 - params容器写入', function(){
-	container("#in.input", ['method' => 'get', 'uri' => '/users/456', 'params' => null]);
+	container("#in.input", ['method' => 'get', 'uri' => '/users/456']);
 	route('get:/users/{id}', function($next){});
 	return input('id', 'params');
 }, '456');
@@ -47,13 +47,13 @@ test('路由 - CLI模式匹配', function(){
 	container("#in.input", [
 		'method' => 'cli',
 		'uri' => 'app.php user list --limit=10',
-		'params' => ['user', 'list', 'limit' => '10'],
 	]);
+	container("#in.params", ['user', 'list', 'limit' => '10']);
 	return route('cli: user', fn($next) => true);
 }, ['cli: user']);
 test('路由 - 路由映射数组', function(){
 	container(null);
-	container("#in.input", ['method' => 'get', 'uri' => '/api/list', 'params' => []]);
+	container("#in.input", ['method' => 'get', 'uri' => '/api/list']);
 	return route([
 		'get:/api/list' => function($next){ return 'list'; },
 		'post:/api/create' => function($next){ return 'create'; },
@@ -61,7 +61,7 @@ test('路由 - 路由映射数组', function(){
 }, ['get:/api/list']);
 test('路由 - 路由映射数组 POST', function(){
 	container(null);
-	container("#in.input", ['method' => 'post', 'uri' => '/api/create', 'params' => []]);
+	container("#in.input", ['method' => 'post', 'uri' => '/api/create']);
 	return route([
 		'get:/api/list' => function($next){ return 'list'; },
 		'post:/api/create' => function($next){ return 'create'; },
@@ -69,21 +69,21 @@ test('路由 - 路由映射数组 POST', function(){
 }, ['post:/api/create']);
 test('路由 - 多路由调用', function(){
 	container(null);
-	container("#in.input", ['method' => 'post', 'uri' => '/api/create', 'params' => []]);
+	container("#in.input", ['method' => 'post', 'uri' => '/api/create']);
 	route('get:/api/list', function($next){ return 'list'; });
 	return route('post:/api/create', function($next){ return 'create'; });
 }, ['post:/api/create']);
 
 test('路由 - 延时模式：收集单路由并触发执行', function(){
 	container(null);
-	container("#in.input", ['method' => 'get', 'uri' => '/api/items', 'params' => []]);
+	container("#in.input", ['method' => 'get', 'uri' => '/api/items']);
 	route(true);
 	route('get:/api/items', fn($next) => 'deferred');
 	return route();
 }, ['get:/api/items']);
 test('路由 - 延时模式：收集数组路由并触发执行', function(){
 	container(null);
-	container("#in.input", ['method' => 'post', 'uri' => '/api/create', 'params' => []]);
+	container("#in.input", ['method' => 'post', 'uri' => '/api/create']);
 	route(true);
 	route([
 		'get:/api/list' => fn($next) => 'list',
@@ -93,7 +93,7 @@ test('路由 - 延时模式：收集数组路由并触发执行', function(){
 }, ['post:/api/create']);
 test('路由 - 延时模式：混合单路由和数组路由', function(){
 	container(null);
-	container("#in.input", ['method' => 'put', 'uri' => '/api/items/5', 'params' => []]);
+	container("#in.input", ['method' => 'put', 'uri' => '/api/items/5']);
 	route(true);
 	route('get:/api/items', fn($next) => 'list');
 	route('put:/api/items/{id}', fn($next) => 'update');
@@ -102,7 +102,7 @@ test('路由 - 延时模式：混合单路由和数组路由', function(){
 }, ['put:/api/items/{id}']);
 test('路由 - 延时模式：不匹配返回null', function(){
 	container(null);
-	container("#in.input", ['method' => 'get', 'uri' => '/api/posts', 'params' => []]);
+	container("#in.input", ['method' => 'get', 'uri' => '/api/posts']);
 	route(true);
 	route('get:/api/items', fn($next) => 'items');
 	route('post:/api/items', fn($next) => 'create');
@@ -110,12 +110,12 @@ test('路由 - 延时模式：不匹配返回null', function(){
 }, null);
 test('路由 - 延时模式：未开启时route()无效应返回null', function(){
 	container(null);
-	container("#in.input", ['method' => 'get', 'uri' => '/api/items', 'params' => []]);
+	container("#in.input", ['method' => 'get', 'uri' => '/api/items']);
 	return route();
 }, null);
 test('路由 - 延时模式：可多次开启', function(){
 	container(null);
-	container("#in.input", ['method' => 'get', 'uri' => '/api/users', 'params' => []]);
+	container("#in.input", ['method' => 'get', 'uri' => '/api/users']);
 	route(true);
 	route('get:/api/items', fn($next) => 'items');
 	route(true);  // 第二次开启，清空之前收集的
@@ -124,7 +124,7 @@ test('路由 - 延时模式：可多次开启', function(){
 }, ['get:/api/users']);
 test('路由 - 空路径会错误匹配所有路由', function(){
 	container(null);
-	container("#in.input", ['method' => 'get', 'uri' => '/', 'params' => []]);
+	container("#in.input", ['method' => 'get', 'uri' => '/']);
 	return route([
 		'get:/test' => fn($next) => 'test',
 		'get:/' => fn($next) => 'root',
@@ -132,7 +132,7 @@ test('路由 - 空路径会错误匹配所有路由', function(){
 }, ['get:/']);
 test('路由 - 多次调用$next被阻止', function(){
 	container(null);
-	container("#in.input", ['method' => 'get', 'uri' => '/test', 'params' => []]);
+	container("#in.input", ['method' => 'get', 'uri' => '/test']);
 	$multiNext = function($next){
 		$first = $next();
 		$second = $next();
@@ -145,7 +145,7 @@ test('路由 - 多次调用$next被阻止', function(){
 }, [['get:/test'], 'first=world,second=world']);
 test('路由 - *通配符阻断后续路由', function(){
 	container(null);
-	container("#in.input", ['method' => 'get', 'uri' => '/some/action', 'params' => []]);
+	container("#in.input", ['method' => 'get', 'uri' => '/some/action']);
 	return route([
 		'get:/some/*' => fn($next) => 'wildcard',
 		'get:/some/action' => fn($next) => 'action',
@@ -153,7 +153,7 @@ test('路由 - *通配符阻断后续路由', function(){
 }, ['get:/some/*', 'get:/some/action']);
 test('路由 - *通配符放行后续路由', function(){
 	container(null);
-	container("#in.input", ['method' => 'get', 'uri' => '/some/action', 'params' => []]);
+	container("#in.input", ['method' => 'get', 'uri' => '/some/action']);
 	return route([
 		'get:/some/*' => fn($next) => $next(),
 		'get:/some/action' => fn($next) => 'action',
@@ -161,49 +161,49 @@ test('路由 - *通配符放行后续路由', function(){
 }, ['get:/some/*', 'get:/some/action']);
 test('路由 - 方案一：组前缀 空键匹配前缀自身', function(){
 	container(null);
-	container("#in.input", ['method' => 'get', 'uri' => '/root/123/game/456', 'params' => []]);
+	container("#in.input", ['method' => 'get', 'uri' => '/root/123/game/456']);
 	return route([':/root/{root}/game/{id}/'=>[
 		'' => fn($next) => 'prefix-self',
 	]]);
 }, [':/root/{root}/game/{id}']);
 test('路由 - 方案一：组前缀 *:* 通配符子路径', function(){
 	container(null);
-	container("#in.input", ['method' => 'get', 'uri' => '/root/123/game/456/anything', 'params' => []]);
+	container("#in.input", ['method' => 'get', 'uri' => '/root/123/game/456/anything']);
 	return route(['get:/root/{root}/game/{id}/'=>[
 		'*:*' => fn($next) => 'wildcard-match',
 	]]);
 }, ['*:/root/{root}/game/{id}/*']);
 test('路由 - 方案一：组前缀 post:run 方法+子路径', function(){
 	container(null);
-	container("#in.input", ['method' => 'post', 'uri' => '/root/123/game/456/run', 'params' => []]);
+	container("#in.input", ['method' => 'post', 'uri' => '/root/123/game/456/run']);
 	return route([':/root/{root}/game/{id}/'=>[
 		'post:run' => fn($next) => 'run-handler',
 	]]);
 }, ['post:/root/{root}/game/{id}/run']);
 test('路由 - 方案一：组前缀 方法不匹配', function(){
 	container(null);
-	container("#in.input", ['method' => 'get', 'uri' => '/root/123/game/456/run', 'params' => []]);
+	container("#in.input", ['method' => 'get', 'uri' => '/root/123/game/456/run']);
 	return route([':/root/{root}/game/{id}/'=>[
 		'post:run' => fn($next) => 'only-post',
 	]]);
 }, null);
 test('路由 - 方案一：组前缀 纯路径+继承方法', function(){
 	container(null);
-	container("#in.input", ['method' => 'get', 'uri' => '/root/123/game/456/action', 'params' => []]);
+	container("#in.input", ['method' => 'get', 'uri' => '/root/123/game/456/action']);
 	return route(['get:/root/{root}/game/{id}/'=>[
 		'action' => fn($next) => 'action-handler',
 	]]);
 }, ['get:/root/{root}/game/{id}/action']);
 test('路由 - 方案一：组前缀 参数提取', function(){
 	container(null);
-	container("#in.input", ['method' => 'get', 'uri' => '/root/abc/game/999/hello', 'params' => []]);
+	container("#in.input", ['method' => 'get', 'uri' => '/root/abc/game/999/hello']);
 	return route(['get:/root/{root}/game/{id}/'=>[
 		'hello' => fn($next) => input('root', 'params') . '-' . input('id', 'params'),
 	]]);
 }, ['get:/root/{root}/game/{id}/hello']);
 test('路由 - 方案二：智能子路由展开', function(){
 	container(null);
-	container("#in.input", ['method' => 'get', 'uri' => '/prefix/run', 'params' => []]);
+	container("#in.input", ['method' => 'get', 'uri' => '/prefix/run']);
 	$track = [];
 	$r = route('get:/prefix/',
 		function($next) use (&$track){ $track[] = 'A'; return $next(); },
@@ -214,7 +214,7 @@ test('路由 - 方案二：智能子路由展开', function(){
 }, [['A', 'B'], ['get:/prefix/run']]);
 test('路由 - 方案二：多子路径分别匹配', function(){
 	container(null);
-	container("#in.input", ['method' => 'get', 'uri' => '/prefix/exe', 'params' => []]);
+	container("#in.input", ['method' => 'get', 'uri' => '/prefix/exe']);
 	$track = [];
 	$r = route('get:/prefix/',
 		function($next) use (&$track){ $track[] = 'A'; return $next(); },
@@ -226,7 +226,7 @@ test('路由 - 方案二：多子路径分别匹配', function(){
 }, [['A', 'exe'], ['get:/prefix/exe']]);
 test('路由 - 方案二：无公共后置处理器', function(){
 	container(null);
-	container("#in.input", ['method' => 'get', 'uri' => '/prefix/sub', 'params' => []]);
+	container("#in.input", ['method' => 'get', 'uri' => '/prefix/sub']);
 	return route('get:/prefix/',
 		fn($next) => 'outer',
 		['sub' => fn($next) => 'sub-only'],
@@ -234,31 +234,31 @@ test('路由 - 方案二：无公共后置处理器', function(){
 }, ['get:/prefix/sub']);
 test('路由 - 显式 method 匹配 DELETE', function(){
 	container(null);
-	container("#in.input", ['method' => 'delete', 'uri' => '/test/path', 'params' => []]);
+	container("#in.input", ['method' => 'delete', 'uri' => '/test/path']);
 	return route('delete:/test/path', fn($next) => 'match');
 }, ['delete:/test/path']);
 test('路由 - 裸路径路由（无方法前缀）匹配任意方法', function(){
 	container(null);
-	container("#in.input", ['method' => 'post', 'uri' => '/bare-path', 'params' => []]);
+	container("#in.input", ['method' => 'post', 'uri' => '/bare-path']);
 	return route('/bare-path', fn($next) => 'bare-path-match');
 }, ['/bare-path']);
 test('路由 - 子路由中 * 为通配符', function(){
 	container(null);
-	container("#in.input", ['method' => 'get', 'uri' => '/root/123/game/456/extra/deep', 'params' => []]);
+	container("#in.input", ['method' => 'get', 'uri' => '/root/123/game/456/extra/deep']);
 	return route(['get:/root/{root}/game/{id}/'=>[
 		'*' => fn($next) => 'sub-wildcard',
 	]]);
 }, ['get:/root/{root}/game/{id}/*']);
 test('路由 - 子路由中 : 等效于空键(前缀匹配)', function(){
 	container(null);
-	container("#in.input", ['method' => 'get', 'uri' => '/root/123/game/456', 'params' => []]);
+	container("#in.input", ['method' => 'get', 'uri' => '/root/123/game/456']);
 	return route([':/root/{root}/game/{id}/'=>[
 		':' => fn($next) => 'colon-prefix',
 	]]);
 }, [':/root/{root}/game/{id}']);
 test('路由 - 子映射多子键均注册：通配符路径', function(){
 	container(null);
-	container("#in.input", ['method' => 'get', 'uri' => '/root/abc/game/999/other', 'params' => []]);
+	container("#in.input", ['method' => 'get', 'uri' => '/root/abc/game/999/other']);
 	return route(['*:/root/{root}/game/{id}/'=>[
 		'*' => fn($next) => 'wildcard-result',
 		'get:exe' => fn($next) => 'exe-result',
@@ -266,7 +266,7 @@ test('路由 - 子映射多子键均注册：通配符路径', function(){
 }, ['*:/root/{root}/game/{id}/*']);
 test('路由 - 子映射多子键均注册：具体路径', function(){
 	container(null);
-	container("#in.input", ['method' => 'get', 'uri' => '/root/abc/game/999/exe', 'params' => []]);
+	container("#in.input", ['method' => 'get', 'uri' => '/root/abc/game/999/exe']);
 	return route(['*:/root/{root}/game/{id}/'=>[
 		'*' => fn($next) => $next(),
 		'get:exe' => fn($next) => 'exe-result',
@@ -274,39 +274,39 @@ test('路由 - 子映射多子键均注册：具体路径', function(){
 }, ['*:/root/{root}/game/{id}/*', 'get:/root/{root}/game/{id}/exe']);
 test('路由 - 尾部/无差异：匹配路径尾部带/', function(){
 	container(null);
-	container("#in.input", ['method' => 'get', 'uri' => '/users/', 'params' => []]);
+	container("#in.input", ['method' => 'get', 'uri' => '/users/']);
 	return route('get:/users', fn($next) => 'no-slash-route');
 }, ['get:/users']);
 test('路由 - 尾部/无差异：路由模式尾部带/', function(){
 	container(null);
-	container("#in.input", ['method' => 'get', 'uri' => '/users', 'params' => []]);
+	container("#in.input", ['method' => 'get', 'uri' => '/users']);
 	return route('get:/users/', fn($next) => 'slash-route');
 }, ['get:/users/']);
 test('路由 - 返回值存容器', function(){
 	container(null);
-	container("#in.input", ['method' => 'get', 'uri' => '/api/items', 'params' => []]);
+	container("#in.input", ['method' => 'get', 'uri' => '/api/items']);
 	route('get:/api/items', fn($next) => 'result-value');
 	return container('#route.result');
 }, 'result-value');
 test('路由 - 不匹配时容器返回 null', function(){
 	container(null);
-	container("#in.input", ['method' => 'get', 'uri' => '/api/none', 'params' => []]);
+	container("#in.input", ['method' => 'get', 'uri' => '/api/none']);
 	route('get:/api/items', fn($next) => 'value');
 	return container('#route.result');
 }, null);
 test('路由 - 嵌套子路由：三层嵌套', function(){
 	container(null);
-	container("#in.input", ['method' => 'get', 'uri' => '/a/b/c/d', 'params' => []]);
+	container("#in.input", ['method' => 'get', 'uri' => '/a/b/c/d']);
 	return route(['get:/a/'=>['b/'=>['c/'=>['d'=>fn($next)=>'deep']]]]);
 }, ['get:/a/b/c/d']);
 test('路由 - 嵌套子路由：四层嵌套', function(){
 	container(null);
-	container("#in.input", ['method' => 'get', 'uri' => '/w/x/y/z', 'params' => []]);
+	container("#in.input", ['method' => 'get', 'uri' => '/w/x/y/z']);
 	return route(['*:/w/'=>['x/'=>['y/'=>['z'=>fn($next)=>'deep']]]]);
 }, ['*:/w/x/y/z']);
 test('路由 - 嵌套子路由：嵌套+外层 before/after', function(){
 	container(null);
-	container("#in.input", ['method' => 'get', 'uri' => '/level1/level2/deep', 'params' => []]);
+	container("#in.input", ['method' => 'get', 'uri' => '/level1/level2/deep']);
 	$track = [];
 	$r = route('get:/level1/',
 		function($next) use (&$track){ $track[] = 'A'; return $next(); },
@@ -317,7 +317,7 @@ test('路由 - 嵌套子路由：嵌套+外层 before/after', function(){
 }, [['A', 'B'], ['get:/level1/level2/deep']]);
 test('路由 - 嵌套子路由：内外全包裹', function(){
 	container(null);
-	container("#in.input", ['method' => 'get', 'uri' => '/level1/level2/deep', 'params' => []]);
+	container("#in.input", ['method' => 'get', 'uri' => '/level1/level2/deep']);
 	$track = [];
 	$r = route('get:/level1/',
 		function($next) use (&$track){ $track[] = 'A'; return $next(); },
@@ -332,17 +332,17 @@ test('路由 - 嵌套子路由：内外全包裹', function(){
 }, [['A', 'B', 'C', 'D', 'E'], ['get:/level1/level2/deep']]);
 test('路由 - 嵌套子路由：方法继承穿透', function(){
 	container(null);
-	container("#in.input", ['method' => 'post', 'uri' => '/a/b/c', 'params' => []]);
+	container("#in.input", ['method' => 'post', 'uri' => '/a/b/c']);
 	return route(['post:/a/'=>['b/'=>['c'=>fn($next)=>'match']]]);
 }, ['post:/a/b/c']);
 test('路由 - 嵌套子路由：方法覆盖', function(){
 	container(null);
-	container("#in.input", ['method' => 'post', 'uri' => '/a/b/c', 'params' => []]);
+	container("#in.input", ['method' => 'post', 'uri' => '/a/b/c']);
 	return route(['*:/a/'=>['post:b'=>['c'=>fn($next)=>'override']]]);
 }, ['post:/a/b/c']);
 test('路由 - 嵌套子路由：同级混合直接+嵌套', function(){
 	container(null);
-	container("#in.input", ['method' => 'get', 'uri' => '/a/b/nested/deep', 'params' => []]);
+	container("#in.input", ['method' => 'get', 'uri' => '/a/b/nested/deep']);
 	return route(['get:/a/'=>[
 		'flat' => fn($next) => 'flat',
 		'b/' => ['nested/' => ['deep' => fn($next) => 'nested-val']],
@@ -350,22 +350,22 @@ test('路由 - 嵌套子路由：同级混合直接+嵌套', function(){
 }, ['get:/a/b/nested/deep']);
 test('路由 - 嵌套子路由：通配符多级', function(){
 	container(null);
-	container("#in.input", ['method' => 'get', 'uri' => '/a/b/c/anything/here', 'params' => []]);
+	container("#in.input", ['method' => 'get', 'uri' => '/a/b/c/anything/here']);
 	return route(['get:/a/'=>['b/'=>['c/'=>['*'=>fn($next)=>'wild-nest']]]]);
 }, ['get:/a/b/c/*']);
 test('路由 - 嵌套子路由：不匹配返回null', function(){
 	container(null);
-	container("#in.input", ['method' => 'get', 'uri' => '/a/b/other', 'params' => []]);
+	container("#in.input", ['method' => 'get', 'uri' => '/a/b/other']);
 	return route(['get:/a/'=>['b/'=>['deep'=>fn($next)=>'val']]]);
 }, null);
 test('路由 - 嵌套子路由：前缀匹配空键', function(){
 	container(null);
-	container("#in.input", ['method' => 'get', 'uri' => '/a/b', 'params' => []]);
+	container("#in.input", ['method' => 'get', 'uri' => '/a/b']);
 	return route(['get:/a/'=>['b/'=>[''=>fn($next)=>'prefix']]]);
 }, ['get:/a/b']);
 test('路由 - 分组中间件：无子路由时保留原始列表', function(){
 	container(null);
-	container("#in.input", ['method' => 'get', 'uri' => '/mixed', 'params' => []]);
+	container("#in.input", ['method' => 'get', 'uri' => '/mixed']);
 	return route(['get:/mixed' => [
 		fn($next) => 'A',
 		[fn($next) => 'B1', fn($next) => 'B2'],
@@ -374,7 +374,7 @@ test('路由 - 分组中间件：无子路由时保留原始列表', function(){
 }, ['get:/mixed']);
 test('路由 - 分组中间件 + 子路由：分组内函数进入累积栈', function(){
 	container(null);
-	container("#in.input", ['method' => 'get', 'uri' => '/group/run', 'params' => []]);
+	container("#in.input", ['method' => 'get', 'uri' => '/group/run']);
 	$track = [];
 	$r = route(['get:/group/' => [
 		function($next) use (&$track){ $track[] = 'A'; return $next(); },
@@ -390,7 +390,7 @@ test('路由 - 分组中间件 + 子路由：分组内函数进入累积栈', fu
 }, [['A', 'B', 'C', 'D', 'E'], ['get:/group/run']]);
 test('路由 - 分组中间件 + 子路由：交错模式', function(){
 	container(null);
-	container("#in.input", ['method' => 'get', 'uri' => '/mix/k1', 'params' => []]);
+	container("#in.input", ['method' => 'get', 'uri' => '/mix/k1']);
 	$track1 = [];
 	$r1 = route(['get:/mix/' => [
 		function($next) use (&$track1){ $track1[] = 'b1'; return $next(); },
@@ -404,7 +404,7 @@ test('路由 - 分组中间件 + 子路由：交错模式', function(){
 		],
 	]]);
 	container(null);
-	container("#in.input", ['method' => 'get', 'uri' => '/mix/k2', 'params' => []]);
+	container("#in.input", ['method' => 'get', 'uri' => '/mix/k2']);
 	$track2 = [];
 	$r2 = route(['get:/mix/' => [
 		function($next) use (&$track2){ $track2[] = 'b1'; return $next(); },
@@ -422,7 +422,7 @@ test('路由 - 分组中间件 + 子路由：交错模式', function(){
 }, [['b1', 'b2', 'h1'], ['get:/mix/k1'], ['b1', 'b2', 'a1', 'h2'], ['get:/mix/k2']]);
 test('路由 - 分组中间件：嵌套子路由内分组', function(){
 	container(null);
-	container("#in.input", ['method' => 'get', 'uri' => '/nest/deep', 'params' => []]);
+	container("#in.input", ['method' => 'get', 'uri' => '/nest/deep']);
 	$track = [];
 	$r = route(['get:/nest/' => [
 		fn($next) => $next(),
@@ -435,7 +435,7 @@ test('路由 - 分组中间件：嵌套子路由内分组', function(){
 }, [[], ['get:/nest/deep']]);
 test('路由 - 缺省key通配符：包裹其他路由', function(){
 	container(null);
-	container("#in.input", ['method' => 'get', 'uri' => '/any/path', 'params' => []]);
+	container("#in.input", ['method' => 'get', 'uri' => '/any/path']);
 	$keys = route([
 		fn($next) => 'wrap(' . $next() . ')',
 		'get:/any/path' => fn($next) => 'inner',
@@ -444,7 +444,7 @@ test('路由 - 缺省key通配符：包裹其他路由', function(){
 }, ['keys' => ['*', 'get:/any/path'], 'result' => 'wrap(inner)']);
 test('路由 - 缺省key通配符：阻断后续路由', function(){
 	container(null);
-	container("#in.input", ['method' => 'get', 'uri' => '/block/test', 'params' => []]);
+	container("#in.input", ['method' => 'get', 'uri' => '/block/test']);
 	$keys = route([
 		fn($next) => 'blocked',
 		'get:/block/test' => fn($next) => 'should-not-reach',
@@ -453,7 +453,7 @@ test('路由 - 缺省key通配符：阻断后续路由', function(){
 }, ['keys' => ['*', 'get:/block/test'], 'result' => 'blocked']);
 test('路由 - 缺省key通配符：匹配任意深度路径', function(){
 	container(null);
-	container("#in.input", ['method' => 'post', 'uri' => '/a/b/c', 'params' => []]);
+	container("#in.input", ['method' => 'post', 'uri' => '/a/b/c']);
 	$keys = route([
 		fn($next) => 'catch:' . $next(),
 		'post:/a/b/c' => fn($next) => 'deep',
@@ -462,7 +462,7 @@ test('路由 - 缺省key通配符：匹配任意深度路径', function(){
 }, ['keys' => ['*', 'post:/a/b/c'], 'result' => 'catch:deep']);
 test('路由 - 缺省key通配符：不干扰子路由组', function(){
 	container(null);
-	container("#in.input", ['method' => 'get', 'uri' => '/api/users', 'params' => []]);
+	container("#in.input", ['method' => 'get', 'uri' => '/api/users']);
 	$keys = route([
 		fn($next) => 'wrap(' . $next() . ')',
 		'api/' => [

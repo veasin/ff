@@ -178,7 +178,7 @@ function route(null|bool|string|array $match = null, array|callable ...$fns): ?a
 	$handlers = [];
 	$matchedKeys = [];
 	$currentMethod = from('method', 'input');
-	$params = from('params', 'input') ?? [];
+	$params = from(null, 'params');
 	$reqSegments = $currentMethod === 'cli' ? [] : array_values(array_filter(explode('/', parse_url(from('uri', 'input'), PHP_URL_PATH) ?: '/')));
 	foreach($normalized as $m => $fn){
 		[$method, $uri] = !str_contains($m, ':') ? ['', $m] : explode(':', $m, 2);

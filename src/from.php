@@ -3,14 +3,7 @@ declare(strict_types=1);
 namespace ff;
 /**
  * 从指定来源获取原始值。input() 内部调用此函数，也可独立使用获取未经验证的原始数据。
- * 来源说明：
- * - query: $_GET 参数
- * - cookie: $_COOKIE
- * - file: $_FILES
- * - params: 路由参数（可通过 container('#in.params') 预置）
- * - header: 请求头（自动统一小写键名）
- * - input: 请求元信息（method, protocol, uri, params）
- * - body: 请求体（自动按 Content-Type 解析 JSON/form/ multipart）
+ * 内置来源：query|cookie|file|params|input，通过 ext 注册的来源：body|header，可扩展自定义来源。
  * ```
  * $id = from('id', 'query');                                        // 从 Query 获取
  * $name = from('name', 'body');                                     // 从 Body 获取
@@ -21,9 +14,10 @@ namespace ff;
  * $data = from(['id' => 0, 'name' => '?'], 'query');               // map：按 key 读取，null 时用默认值兜底
  * container('#in.params', ['id' => 123]);                           // 预置路由参数
  * container('#in.content', ['application/xml' => fn($r) => ...]);  // 扩展 content-type 解析
+ * container('^#ext.from.session', fn() => $_SESSION);              // 扩展自定义来源
  * ```
  * @param string|null|array $name   键名；null 返回整个来源；list 数组批量读取；map 数组批量读取+默认值兜底
- * @param string|array      $source 来源名称（query|cookie|file|params|header|input|body），或直接提供数组作为来源
+ * @param string|array      $source 来源名称（query|cookie|file|params|input|header|body|...），或直接提供数组作为来源
  * @return mixed 来源中指定键的值；整个来源；批量读取时返回关联数组；不存在返回 null
  */
 function from(string|null|array $name, string|array $source = 'body'): mixed{
@@ -33,53 +27,19 @@ function from(string|null|array $name, string|array $source = 'body'): mixed{
 				'method' => 'cli',
 				'protocol' => null,
 				'uri' => implode(' ', $_SERVER['argv']),
-				'params' => args(array_slice($_SERVER['argv'], 1)) ?? [],
 			]
 			: [
 				'method' => strtolower($_SERVER['REQUEST_METHOD'] ?? 'get'),
 				'protocol' => $_SERVER["SERVER_PROTOCOL"] ?? 'HTTP/1.1',
 				'uri' => $_SERVER['REQUEST_URI'] ?? '/',
-				'params' => null,
 			];
-		container("#in.params", $result['params']);
 		container("#in.input", $result);
 		return $result;
 	};
-	static $getHeaders = function(){
-		$headers = null;
-		if(function_exists('getallheaders')){
-			foreach(getallheaders() as $name => $value){
-				$name = strtolower($name);
-				foreach((array)$value as $v){
-					$headers[$name] = isset($headers[$name]) ? [...(array)$headers[$name], $v] : $v;
-				}
-			}
-		}
-		else{
-			foreach($_SERVER as $n => $v){
-				if(str_starts_with($n, 'HTTP_')){
-					$name = str_replace(' ', '-', strtolower(str_replace('_', ' ', substr($n, 5))));
-					$headers[$name] = isset($headers[$name]) ? [...(array)$headers[$name], $v] : $v;
-				}
-			}
-		}
-		container("#in.headers", $headers);
-		return $headers;
-	};
-	static $getBody = function(){
-		$content_type = from('content-type', 'header');
-		$content_type = $content_type ? strtolower(trim(explode(';', $content_type)[0])) : null;
-		$raw = container("#in.raw") ?? file_get_contents('php://input');
-		$parsers = [
-			'multipart/form-data' => fn($raw) => $_POST,
-			'application/x-www-form-urlencoded' => fn($raw) => (parse_str($raw, $p) ?? $p),
-			'application/json' => fn($raw) => json_decode($raw, true),
-			...(container('#in.content') ?? []),
-		];
-		$body = ($parsers[$content_type] ?? $parsers['default'] ?? fn() => [])($raw) ?? [];
-		$body['RAW'] = $raw;
-		container("#in.body", $body);
-		return $body;
+	static $getParams = function(){
+		$params = container('#mode:cli') ? (args(array_slice($_SERVER['argv'], 1)) ?? []) : [];
+		container("#in.params", $params);
+		return $params;
 	};
 	$from = is_array($source)
 		? $source
@@ -87,11 +47,9 @@ function from(string|null|array $name, string|array $source = 'body'): mixed{
 			'query' => $_GET,
 			'cookie' => $_COOKIE,
 			'file' => $_FILES,
-			'params' => container("#in.params") ?? from('params', 'input') ?? [],
-			'header' => container("#in.headers") ?? $getHeaders(),
+			'params' => container("#in.params") ?? $getParams(),
 			'input' => container("#in.input") ?? $getInput(),
-			'body' => container("#in.body") ?? $getBody(),
-			default => [],
+			default => ext('from', $source) ?? [],
 		};
 	return match (true) {
 		$name === null => $from,

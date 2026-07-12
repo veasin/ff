@@ -3,6 +3,10 @@
 use function ff\{container, hook, output};
 
 container('^#ext', [
+	'from' => [
+		'body' => \ff\from\body(...),
+		'header' => \ff\from\header(...),
+	],
 	'http' => [
 		'curl' => \ff\http\curl(...),
 		'stream' => \ff\http\stream(...),

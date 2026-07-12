@@ -6,24 +6,22 @@ use function ff\{container, from, test};
 container("#in.input", [
 	'method' => 'get',
 	'uri' => '/users/123?name=test',
-	'params' => null,
 ]);
 container('#in.params', ['id' => '123', 'name' => 'test']);
 $_GET = ['name' => 'test'];
 test('from source - 完整数组', from(null, 'input'), fn($v) => is_array($v) && isset($v['method']) && isset($v['uri']));
 test('from source - method', from('method', 'input'), 'get');
 test('from source - uri', from('uri', 'input'), '/users/123?name=test');
-test('from source - params (web)', from('params', 'input'), null);
 test('params source - 容器有值', from('id', 'params'), '123');
 test('params source - 容器无值', from('name', 'params'), 'test');
 container("#in.input", [
 	'method' => 'cli',
 	'uri' => 'cli.php --name=test --id=123',
-	'params' => ['name' => 'test', 'id' => '123'],
 ]);
+container("#in.params", ['name' => 'test', 'id' => '123']);
 test('from source - cli mode', from('method', 'input'), 'cli');
 test('from source - cli uri', from('uri', 'input'), 'cli.php --name=test --id=123');
-test('from source - cli params', from('params', 'input'), fn($v) => is_array($v) && isset($v['name']));
+test('from source - cli params', from(null, 'params'), fn($v) => is_array($v) && isset($v['name']));
 test('query source', from('name', 'query'), 'test');
 test('name=null 返回数组', from(null, 'query'), ['name' => 'test']);
 test('from 使用数组作为source', from('id', ['id' => '456', 'name' => 'test']), '456');
