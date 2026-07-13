@@ -8,11 +8,11 @@ use function ff\container;
  * 解析规则集，将 input/filter 的 $set 格式解析为标准化的 [rule, set] 有序数组。
  * 供 input() 和 filter() 共同使用，识别 type/check/abbr 并展开逗号简写与命名 key。
  * ```
- * rules(['int', 'body']);                                    // [['type','int'], ['from','body']]
- * rules(['str', 'email']);                                   // [['type','str'], ['check','email',null]]
- * rules(['str', 'cmp' => ['op' => '>=', 'value' => 18]]); // [['type','str'], ['check','cmp',[...]]]
- * rules(['name' => ['str']]);                                // ['name' => ['str']]
- * rules([fn($v) => $v > 0]);                                // [['check', closure, null]]
+ * rules(['int', 'body']);                          // [['type','int'], ['from','body']]
+ * rules(['str', 'email']);                         // [['type','str'], ['check','email',null]]
+ * rules(['str', 'cmp' => ['>=', 18]]);             // [['type','str'], ['check','cmp',['>=',18]]]
+ * rules(['name' => ['str']]);                      // ['name' => ['str']]
+ * rules([fn($v) => $v > 0]);                       // [['check', closure, null]]
  * ```
  * @param array $set 规则集（字符串数组、逗号简写、命名 key、闭包）
  * @return array 有序数组，每项为 [name, set] 或 [name, set, param]

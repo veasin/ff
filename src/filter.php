@@ -9,16 +9,18 @@ use function ff\filter\{check, rules};
  * 参数结构与 input 单字段 $set 格式一致，不支持 from/key/null/error/defaults。
  * 内部通过 filter\rules() 解析规则、filter\check() 执行类型转换与验证。
  * ```
- * filter('123', 'int');                                     // 123
- * filter('abc', 'int');                                     // null（type 转换失败）
- * filter('test@example.com', 'email');                      // 'test@example.com'
- * filter('bad', 'email');                                   // null
- * filter(20, ['int', 'cmp' => ['op' => '>=', 'value' => 18]]); // 20
- * filter(15, ['int', 'cmp' => ['op' => '>=', 'value' => 18]]); // null
- * filter(20, ['int', '>=18']);                               // parse 简写: 20
- * filter('hello', ['str', '>=3']);                           // parse 长度比较: 'hello'
- * filter('abc', fn($v) => strlen($v) > 2);                 // 'abc'
- * filter('ab', fn($v) => strlen($v) > 2);                  // null
+ * filter('123', 'int');                              // 123
+ * filter('abc', 'int');                              // null（type 转换失败）
+ * filter('test@example.com', 'email');               // 'test@example.com'
+ * filter('bad', 'email');                            // null
+ * filter(20, ['int', 'cmp' => ['>=', 18]]);         // 20
+ * filter(15, ['int', 'cmp' => ['>=', 18]]);         // null
+ * filter(20, ['int', '>=18']);                        // parse 简写: 20
+ * filter('hello', ['str', '>=3']);                    // parse 长度比较: 'hello'
+ * filter(50, '1..100');                               // 范围简写: 50
+ * filter('hello', '3-12');                            // 长度范围: 'hello'
+ * filter('abc', fn($v) => strlen($v) > 2);           // 'abc'
+ * filter('ab', fn($v) => strlen($v) > 2);            // null
  * filter('', ['str', 'empty' => 'default', 'default' => 'N/A']); // 'N/A'
  * ```
  * @param mixed                 $var 待验证的值

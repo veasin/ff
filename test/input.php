@@ -45,7 +45,7 @@ test('null:throw', function(){
 // ============================================================
 // 5. abbr 缩写
 // ============================================================
-test('integer → int', input(['age' => ['integer']], ['from' => 'query']), ['age' => 25]);
+test('email → filter', input(['email' => ['str', 'email']], ['from' => 'body']), ['email' => 'john@example.com']);
 test('body → from:body', input(['name' => ['str', 'body']]), ['name' => 'John']);
 test('query → from:query', input(['name' => ['str', 'query']]), ['name' => 'test']);
 test('remove → null:remove', input(['missing' => ['str', 'remove']]), []);
@@ -197,11 +197,11 @@ test('默认异常类是 RuntimeException', function(){
 }, fn($v) => $v instanceof \RuntimeException && !($v instanceof \InvalidArgumentException));
 
 // ============================================================
-// 23. bootstrap 注册 check: ip-v4, ip-v6, number
+// 23. bootstrap 注册 check: ip, ip-v6, number
 // ============================================================
-test('ip-v4 通过', input(['ip' => ['str', 'ip-v4']]), ['ip' => '192.168.1.1']);
-test('ip-v4 失败', function(){
-	input(['ip' => ['str', 'ip-v4']], ['from' => fn($k) => 'not-an-ip']);
+test('ip 通过', input(['ip' => ['str', 'ip']]), ['ip' => '192.168.1.1']);
+test('ip 失败', function(){
+	input(['ip' => ['str', 'ip']], ['from' => fn($k) => 'not-an-ip']);
 }, fn($v) => $v instanceof \RuntimeException);
 test('ip-v6 通过', input(['ip' => ['str', 'ip-v6']], ['from' => fn($k) => '::1']), ['ip' => '::1']);
 test('ip-v6 失败', function(){

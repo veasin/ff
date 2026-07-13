@@ -43,26 +43,26 @@ container([
 		'check' => [
 			'cmp' => function($v, $p){
 				$left = is_numeric($v) ? $v : strlen($v);
-				return match ($p['op']) {
-					'=' => $left == $p['value'],
-					'!=' => $left != $p['value'],
-					'>' => $left > $p['value'],
-					'<' => $left < $p['value'],
-					'>=' => $left >= $p['value'],
-					'<=' => $left <= $p['value'],
-					default => true,
+				return match ($p[0]) {
+					'=' => $left == $p[1],
+					'!=' => $left != $p[1],
+					'>' => $left > $p[1],
+					'<' => $left < $p[1],
+					'>=' => $left >= $p[1],
+					'<=' => $left <= $p[1],
+					default => ['throw', ['message' => "cmp: unknown operator $p[0]"]],
 				};
 			},
-			'filter_var' => fn($v, $p) => filter_var($v, $p['filter'], $p['flags'] ?? 0) !== false,
+			'range' => function($v, $p){
+				$left = is_numeric($v) ? $v : strlen($v);
+				return $left >= $p[0] && $left <= $p[1];
+			},
+			'enum' => fn($v, $p) => in_array($v, $p, true),
+			'regex' => fn($v, $p) => preg_match($p, $v) === 1,
+			'filter' => fn($v, $p) => filter_var($v, $p[0], $p[1] ?? 0) !== false,
 			'number' => is_numeric(...),
 		],
 		'abbr' => [
-			'integer' => 'int',
-			'unsigned' => 'uint',
-			'string' => 'str',
-			'boolean' => 'bool',
-			'arr' => 'array',
-			'values' => 'array',
 			'body' => ['from' => 'body'],
 			'query' => ['from' => 'query'],
 			'header' => ['from' => 'header'],
@@ -71,13 +71,18 @@ container([
 			'params' => ['from' => 'params'],
 			'remove' => ['null' => 'remove'],
 			'throw' => ['null' => 'throw'],
-			'email' => ['filter_var' => ['filter' => FILTER_VALIDATE_EMAIL]],
-			'url' => ['filter_var' => ['filter' => FILTER_VALIDATE_URL]],
-			'ip-v4' => ['filter_var' => ['filter' => FILTER_VALIDATE_IP, 'flags' => FILTER_FLAG_IPV4]],
-			'ip-v6' => ['filter_var' => ['filter' => FILTER_VALIDATE_IP, 'flags' => FILTER_FLAG_IPV6]],
+			'email' => ['filter' => [FILTER_VALIDATE_EMAIL]],
+			'url' => ['filter' => [FILTER_VALIDATE_URL]],
+			'ip' => ['filter' => [FILTER_VALIDATE_IP]],
+			'ip-v6' => ['filter' => [FILTER_VALIDATE_IP, FILTER_FLAG_IPV6]],
+			'uuid' => ['regex' => '/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i'],
 		],
 		'parse' => [
-			'/^(>=?|<=?|!=|=)(\d+(?:\.\d+)?)$/' => fn($m) => ['cmp' => ['op' => $m[1], 'value' => (float)$m[2]]],
+			'/^(>=?|<=?|!=|=)(\d+(?:\.\d+)?)$/' => fn($m) => ['cmp' => [$m[1], (float)$m[2]]],
+			'/^(.+(\|.+)+)$/' => fn($m) => ['enum' => explode('|', $m[1])],
+			'/^regex:(.+)$/' => fn($m) => ['regex' => $m[1]],
+			'/^(\d+)\.\.(\d+)$/' => fn($m) => ['range' => [(int)$m[1], (int)$m[2]]],
+			'/^(\d+)-(\d+)$/' => fn($m) => ['range' => [(int)$m[1], (int)$m[2]]],
 		],
 	],
 	'^#out' => ['type' => 'json', 'emit' => container('#mode:cli') ? 'cli' : 'http'],

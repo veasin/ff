@@ -250,16 +250,16 @@ $input = input(['age' => ['int', '>=:18']]);                                // c
 
 **内置规则：**
 
-| 规则 | 说明 |
-|---|---|
-| `type` | 类型转换，从 `#input.type.{name}` 获取 |
-| `from` | 来源，支持 string/callable/ArrayAccess |
-| `key` | lookup key，覆盖字段名作为来源的 key |
-| `null` | null 值处理：简写/完整格式 |
-| `empty` | 空值处理：简写/完整格式 |
-| `default` | 默认值规则，null/empty fail=default 或 check fail=default 时回退取值 |
-| `error` | 异常配置：`string`/`int`/`['message','code','exception']` |
-| check | 验证规则，支持 bool 或 `[action, opts]` 返回 |
+| 规则名 | 说明 | 完整配置 | 示例 | 简写示例 |
+|---|---|---|---|---|
+| `from` | 数据来源，支持 string/callable/ArrayAccess | `{from:str\|callable\|ArrayAccess}` | `['from' => 'query']` | `'query'`、`'body'`、`'header'`、`'cookie'`、`'file'`、`'params'` |
+| `key` | lookup key，覆盖字段名作为来源 key | `{key:str}` | `['key' => 'user_name']` | `'key:name'` |
+| `null` | null 值处理，简写或完整格式 | `{null:str\|{fail,default?,error?}}` | `['null' => 'remove']` | `'null:remove'`、`'null:0'` |
+| `empty` | 空值处理，简写或完整格式 | `{empty:str\|{fail,default?,error?}}` | `['empty' => 'default']` | `'empty:N/A'` |
+| `default` | 默认值，fail=default 时回退取值 | `{default:mixed}` | `['default' => 'N/A']` | - |
+| `error` | 异常配置 | `{error:str\|int\|{message?,code?,exception?}}` | `['error' => '必填']` | - |
+
+> type、check 规则与 filter 共用，见 [filter 内置规则一览](#filter---数据验证与转换)。
 
 **$defaults 默认规则集：**
 
@@ -449,17 +449,16 @@ $session = from('session', 'foo'); // → ext('from', 'session') → $_SESSION['
 内部通过 `filter\rules()` 解析规则、`filter\check()` 执行类型转换与验证，失败返回 null。
 
 ```php
-filter('123', 'int');                                          // 类型转换: 返回 123
-filter('abc', 'int');                                          // 转换失败: 返回 null
-filter('true', 'bool');                                        // 返回 true
-filter('test@example.com', 'email');                           // 邮箱验证通过
-filter('bad', 'email');                                        // 验证失败: 返回 null
-filter(20, ['int', 'cmp' => ['op' => '>=', 'value' => 18]]); // 参数化验证: 返回 20
-filter(15, ['int', 'cmp' => ['op' => '>=', 'value' => 18]]); // 参数化验证: 返回 null
-filter(20, ['int', '>=18']);                                   // parse 简写: 返回 20
-filter('hello', ['str', '>=3']);                               // parse 长度比较: 返回 'hello'
-filter('abc', fn($v) => strlen($v) > 2);                      // 闭包验证: 返回 'abc'
-filter('', ['str', 'empty' => 'default', 'default' => 'N/A']); // 空值处理: 返回 'N/A'
+filter('123', 'int');                              // 类型转换: 123
+filter('abc', 'int');                              // 转换失败: null
+filter('test@example.com', 'email');               // 验证通过: 'test@example.com'
+filter('bad', 'email');                            // 验证失败: null
+filter(20, ['int', 'cmp' => ['>=', 18]]);         // 参数化验证: 20
+filter(20, ['int', '>=18']);                        // parse 简写: 20
+filter(50, '1..100');                               // range 简写: 50
+filter('hello', '3-12');                            // range 长度简写: 'hello'
+filter('abc', fn($v) => strlen($v) > 2);           // 闭包验证: 'abc'
+filter('', ['str', 'empty' => 'default', 'default' => 'N/A']); // 'N/A'
 ```
 
 **$set 规则格式：**（与 input 单字段规则一致）
@@ -469,9 +468,8 @@ filter('', ['str', 'empty' => 'default', 'default' => 'N/A']); // 空值处理: 
 | 字符串 | `'int'`、`'str'` | type 转换 |
 | 逗号分隔 | `'int,>=18'` | 多条规则组合 |
 | 数组 | `['int', 'email']` | type + check |
-| 命名 key | `['cmp' => ['op' => '>=', 'value' => 18]]` | check + 参数 |
+| 命名 key | `['cmp' => ['>=', 18]]` | check + 参数 |
 | 闭包 | `fn($v) => $v > 0` | 自定义验证 |
-| parse 简写 | `'>=18'`、`'<100'` | 自动解析为 cmp check |
 
 **filter 识别的规则：** type、empty、check、default、error
 
@@ -481,65 +479,41 @@ filter('', ['str', 'empty' => 'default', 'default' => 'N/A']); // 空值处理: 
 
 内部使用 `filter\check()` 执行验证，check 返回的 `throw`/`default`/`remove` 均映射为 null。
 
-容器配置：（与 input 共享）
+### 内置规则一览
 
-- **`#input.type`**: `array` - 类型转换规则，格式 `[name => callable]`
-- **`#input.check`**: `array` - check 规则，格式 `[name => callable]`，签名 `fn($value, $param): bool|array`
-- **`#input.abbr`**: `array` - abbr 简写，格式 `[abbr => config]`
-- **`#input.parse`**: `array` - parse 简写规则，格式 `[regex => callable]`，闭包返回可被 rules() 递归解析的数组
+> **规则格式：** `{rule:set}` — `rule` 是规则名，`set` 是配置值。
 
-### cmp - 比较 check（内置）
+| rule | 说明 | 完整格式 | 示例 | 简写 |
+|---|---|---|---|---|
+| `type` | 类型转换，set 为类型名 | `{type:str}` | `['int']` | `'int'`、`'str'`、`'bool'`、`'uint'`、`'float'`、`'array'`、`'json'`、`'date'`、`'hex'`、`'base64'` |
+| `cmp` | 比较器（`= != > < >= <=`），数值直接比较，字符串按长度比较 | `{cmp:[op, value]}` | `['cmp' => ['>=', 18]]` | `'>=18'` |
+| `range` | 范围验证（`min <= value <= max`），数值直接比较，字符串按长度比较 | `{range:[min, max]}` | `['range' => [1, 100]]` | `'1..100'`、`'3-12'` |
+| `enum` | 枚举验证，`in_array` 严格比较，不自动转型 | `{enum:str[]}` | `['enum' => ['aa', 'bb']]` | `'aa\|bb\|cc'` |
+| `regex` | 正则匹配，`preg_match` 验证 | `{regex:str}` | `['regex' => '/^[a-z]+$/']` | `'regex:/^[a-z]+$/'` |
+| `filter` | PHP filter_var 验证 | `{filter:[int, int?]}` | `['filter' => [FILTER_VALIDATE_EMAIL]]` | `'email'`、`'url'`、`'ip'`、`'ip-v6'` |
+| `number` | 数值验证（`is_numeric`） | `{check:"number"}` | `['number']` | - |
 
-通用比较器，根据 `$value` 类型自动选择比较方式：
-- **数值**：直接比较（支持整数和浮点数）
-- **字符串**：按长度比较
+**简写机制：**
 
-```php
-filter(20, ['int', 'cmp' => ['op' => '>=', 'value' => 18]]);  // 20 >= 18 → 20
-filter('hello', ['str', 'cmp' => ['op' => '>=', 'value' => 3]]); // strlen('hello')=5 >= 3 → 'hello'
-filter('hi', ['str', 'cmp' => ['op' => '>=', 'value' => 3]]);    // strlen('hi')=2 >= 3 → null
-```
-
-**支持的操作符：** `=`、`!=`、`>`、`<`、`>=`、`<=`
-
-### parse - 简写规则解析
-
-将符合特定模式的字符串自动解析为规则。通过 `#input.parse` 注册正则和解析闭包。
+- **abbr**（`#input.abbr`）：直接映射，如 `'int' => ['type', 'int']`，处理顺序优先
+- **parse**（`#input.parse`）：正则匹配，如 `/^(>=?|<=?|!=|=)(\d+)$/` → `['cmp', [$op, $num]]`
 
 ```php
-// 内置 parse 规则：比较简写
-filter(20, ['int', '>=18']);       // 解析为 ['cmp' => ['op' => '>=', 'value' => 18]]
-filter('hello', ['str', '>=3']);   // 字符串按长度比较
+// 自定义 parse 规则
+container('^#input.parse./^@(\d+)-(\d+)$/', fn($m) => ['range' => [(int)$m[1], (int)$m[2]]]);
 ```
 
-**内置 parse 规则：**
-
-| 正则 | 说明 | 示例 |
-|---|---|---|
-| `/^(>=?\|<=?\|!=\|=\|)(\d+(?:\.\d+)?)$/` | 数值比较简写 | `>18`、`>=18.5`、`<100`、`=0`、`!=0` |
-
-**自定义 parse 规则：**
-
-```php
-// 注册自定义 parse 规则
-container('#input.parse', [
-    '/^len(>=?\|<=?\|!=\|=)(\d+)$/' => function($m){
-        return ['strlen' => ['op' => $m[1], 'value' => (int)$m[2]]];
-    },
-]);
-```
-
-parse 闭包返回的数组会被 `rules()` 递归解析，因此可以同时生成多条规则。
+parse 闭包返回的数组会被 `rules()` 递归解析，可同时生成多条规则。
 
 ### filter\rules - 规则解析（内部）
 
-解析规则集，将 input/filter 的 `$set` 格式解析为标准化的 `[rule, set]` 有序数组。供 `input()` 和 `filter()` 内部共同使用，不推荐直接调用。
+解析规则集，将 input/filter 的 `$set` 格式解析为标准化的 `[rule, set]` 有序数组。
 
 ```php
-rules(['int', 'body']);                                     // [['type','int'], ['from','body']]
-rules(['str', 'email']);                                    // [['type','str'], ['check','email',null]]
-rules(['str', 'cmp' => ['op' => '>=', 'value' => 18]]);   // [['type','str'], ['check','cmp',[...]]]
-rules([fn($v) => $v > 0]);                                 // [['check', closure, null]]
+rules(['int', 'body']);                          // [['type','int'], ['from','body']]
+rules(['str', 'email']);                         // [['type','str'], ['check','email',null]]
+rules(['str', 'cmp' => ['>=', 18]]);             // [['type','str'], ['check','cmp',['>=',18]]]
+rules([fn($v) => $v > 0]);                       // [['check', closure, null]]
 ```
 
 识别顺序：type → abbr → check → parse → 未知抛 `InvalidArgumentException`。
