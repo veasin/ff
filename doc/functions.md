@@ -445,26 +445,80 @@ $session = from('session', 'foo'); // → ext('from', 'session') → $_SESSION['
 
 ## filter - 数据验证与转换
 
-类型转换与验证规则链，规则可逗号分隔组合。
+验证并转换数据，参数结构与 input 单字段 $set 格式一致，不支持 from/key/null/error/defaults。
+内部通过 `filter\rules()` 解析规则、`filter\check()` 执行类型转换与验证，失败返回 null。
 
 ```php
-filter('123', 'int');//返回 123 (int)
-filter('true', 'bool');//返回 true
-filter('{"a":1}', 'json');//返回 ['a' => 1]
-filter('hello@example.com', 'email');//邮箱验证
-filter('150', 'int,>100,<200');//逗号分隔组合规则
-filter(10, 'int', '>5');//返回 10
-filter(3, 'int', '>5');//返回 null（验证失败）
-filter('abc', fn($v) => strlen($v) > 2);//自定义验证，返回 'abc'
+filter('123', 'int');                                          // 类型转换: 返回 123
+filter('abc', 'int');                                          // 转换失败: 返回 null
+filter('true', 'bool');                                        // 返回 true
+filter('test@example.com', 'email');                           // 邮箱验证通过
+filter('bad', 'email');                                        // 验证失败: 返回 null
+filter(20, ['int', 'digit' => ['op' => '>=', 'value' => 18]]); // 参数化验证: 返回 20
+filter(15, ['int', 'digit' => ['op' => '>=', 'value' => 18]]); // 参数化验证: 返回 null
+filter('abc', fn($v) => strlen($v) > 2);                      // 闭包验证: 返回 'abc'
+filter('', ['str', 'empty' => 'default', 'default' => 'N/A']); // 空值处理: 返回 'N/A'
 ```
 
-容器配置：
-- **`#filter`**: `array` - 扩展规则，格式 `[name => [type, default, [callable]]]`
+**$set 规则格式：**（与 input 单字段规则一致）
+
+| 格式 | 示例 | 说明 |
+|---|---|---|
+| 字符串 | `'int'`、`'str'` | type 转换 |
+| 逗号分隔 | `'int,>=18'` | 多条规则组合 |
+| 数组 | `['int', 'email']` | type + check |
+| 命名 key | `['digit' => ['op' => '>=', 'value' => 18]]` | check + 参数 |
+| 闭包 | `fn($v) => $v > 0` | 自定义验证 |
+
+**filter 识别的规则：** type、empty、check、default、error
+
+**filter 不支持的 input 规则：** from、key、null（传入抛 `InvalidArgumentException`）
+
+**返回值：** 通过返回转换后的值，失败返回 null。
+
+内部使用 `filter\check()` 执行验证，check 返回的 `throw`/`default`/`remove` 均映射为 null。
+
+容器配置：（与 input 共享）
+
+- **`#input.type`**: `array` - 类型转换规则，格式 `[name => callable]`
+- **`#input.check`**: `array` - check 规则，格式 `[name => callable]`，签名 `fn($value, $param): bool|array`
+- **`#input.abbr`**: `array` - abbr 简写，格式 `[abbr => config]`
+
+### filter\rules - 规则解析（内部）
+
+解析规则集，将 input/filter 的 `$set` 格式解析为标准化的 `[rule, set]` 有序数组。供 `input()` 和 `filter()` 内部共同使用，不推荐直接调用。
 
 ```php
-container('#filter.phone', [null, null, [fn($v) => preg_match('/^1\d{10}$/', $v)]]);
-filter('13800138000', 'phone');//返回 '13800138000'
+rules(['int', 'body']);                                     // [['type','int'], ['from','body']]
+rules(['str', 'email']);                                    // [['type','str'], ['check','email',null]]
+rules(['str', 'digit' => ['op' => '>=', 'value' => 18]]);  // [['type','str'], ['check','digit',[...]]]
+rules([fn($v) => $v > 0]);                                 // [['check', closure, null]]
 ```
+
+识别顺序：type → abbr → check → 未知抛 `InvalidArgumentException`。
+
+### filter\check - 类型转换与验证（内部）
+
+执行 type 转换 + empty 检查 + check 验证，通过生成器逐步 yield 结果，最终 return 处理后的值。供 `input()` 和 `filter()` 内部共同使用，不推荐直接调用。
+
+```php
+$gen = check('test@example.com', ['check' => [['email', null]]]);
+// foreach 消费: bool 通过时不 yield，直接进入下一个 check
+$gen->getReturn(); // 'test@example.com'
+
+$gen = check('', ['empty' => ['fail' => 'throw'], 'check' => []]);
+$gen->current(); // ['empty', ['fail' => 'throw']]
+```
+
+**yield 格式：**
+
+| yield | 说明 |
+|---|---|
+| `['empty', $_set]` | empty 规则触发，`$_set` 为完整格式 `['fail' => ..., 'default' => ..., 'error' => ...]` |
+| `[$name, false]` | check 失败（闭包返回 `false`） |
+| `[$name, [action, $opts]]` | check 失败（闭包返回结构化结果），action 支持 `'throw'`/`'default'`/`'remove'` |
+
+**返回值：** `getReturn()` 返回处理后的值（type 转换后、empty default 替换后）。
 
 ---
 

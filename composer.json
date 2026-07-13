@@ -38,6 +38,8 @@
       "src/container.php",
       "src/ext.php",
       "src/filter.php",
+      "src/filter/rules.php",
+      "src/filter/check.php",
       "src/args.php",
       "src/from.php",
       "src/from/header.php",

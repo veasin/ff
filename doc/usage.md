@@ -79,17 +79,23 @@ $pdo = container('pdo*');
   - 需要对输入做更精细的控制？→ 拆成 `from()` + `filter()`
 
 ```php
-// 来源和规则组合
-$age = input('age', 'query,int,>=18,<=100');
+// 单字段规则
+$input = input(['age' => ['int', 'query']]);
 
 // 多个字段各自带规则
 $data = input([
-    'id'   => 'int,>0',
-    'name' => 'str',
+    'id'   => ['int', 'query'],
+    'name' => ['str', 'body'],
+]);
+
+// 逗号简写
+$data = input([
+    'id'   => 'int,query',
+    'name' => 'str,body',
 ]);
 
 // 路由参数
-$id = input('id', 'params', 'int');
+$id = input(['id' => ['int', 'params']]);
 ```
 
 ---
@@ -185,10 +191,10 @@ container('#env', __DIR__ . '/.env');
 // ✅ 推荐：一次性数组 — API 端点组
 route(['api/'=>[
     fn($next) => basic($next),                // before：所有端点先过鉴权
-    'post:login'   => fn($next) => output(login(input('name,pass', 'body'))),  // login 跳过 rate_limit
+    'post:login'   => fn($next) => output(login(input(['name' => 'str,body', 'pass' => 'str,body']))),
     fn($next) => rate_limit($next),           // login 之后的端点需要限流
-    'post:data'    => fn($next) => output(create(input('content', 'body'))),
-    'get:list'     => fn($next) => output(fetch(input('page', 'query'))),
+    'post:data'    => fn($next) => output(create(input(['content' => 'str,body']))),
+    'get:list'     => fn($next) => output(fetch(input(['page' => 'int,query']))),
     fn($next) => log($next),                 // after：所有端点记日志
 ]]);
 ```
@@ -279,11 +285,11 @@ route([
 ```php
 // routes/user.php — 手动写 route 键
 return [
-    'get:'       => fn() => output(listUsers(input('page', 'query'))),
-    'post:'      => fn() => output(createUser(input('body')), 201),
-    'get:{id}'   => fn() => output(getUser(input('id', 'params', 'int'))),
-    'patch:{id}' => fn() => output(null, updateUser(input('id', 'params', 'int'), input('body')) ? 204 : 404),
-    'delete:{id}'=> fn() => output(null, deleteUser(input('id', 'params', 'int')) ? 204 : 404),
+    'get:'       => fn() => output(listUsers(input(['page' => 'int,query']))),
+    'post:'      => fn() => output(createUser(input(['name' => 'str,body'])), 201),
+    'get:{id}'   => fn() => output(getUser(input(['id' => 'int,params']))),
+    'patch:{id}' => fn() => output(null, updateUser(input(['id' => 'int,params']), input(['name' => 'str,body'])) ? 204 : 404),
+    'delete:{id}'=> fn() => output(null, deleteUser(input(['id' => 'int,params'])) ? 204 : 404),
 ];
 ```
 
@@ -315,6 +321,7 @@ route([
 
 - `input()` 是 `from()` + `filter()` 的高阶整合，当需要对输入做更精细的控制时拆开使用
 - `from()` 只负责取，`filter()` 只负责验
+- `filter()` 参数结构与 input 单字段 `$set` 格式一致，失败返回 null
 
 ```php
 // from() — 从指定来源获取未经处理的原始值
@@ -322,14 +329,18 @@ $id   = from('id', 'query');      // $_GET
 $all  = from(null, 'header');     // 整个来源
 
 // filter() — 类型转换 + 规则验证，失败返回 null
-filter('150', 'int,>0,<200');    // 验证+转换
-filter('true', 'bool');           // bool true
-filter($v, fn($v) => strlen($v) > 2);  // 自定义闭包
+filter('150', 'int');                                        // 类型转换
+filter('test@example.com', 'email');                         // 验证通过
+filter('bad', 'email');                                      // 验证失败: null
+filter(20, ['int', 'digit' => ['op' => '>=', 'value' => 18]]); // 参数化验证
+filter($v, fn($v) => strlen($v) > 2);                       // 自定义闭包
 
-// 自定义规则可注册到容器统一管理
-container('#filter.phone', [null, null, [fn($v) => preg_match('/^1\d{10}$/', $v)]]);
-filter('13800138000', 'phone');
+// 自定义 check 规则注册到 #input.check，与 input 共享
+container('^#input.check.phone', fn($v) => preg_match('/^1\d{10}$/', $v));
+filter('13800138000', ['str', 'phone']);
 ```
+
+> **注意：** `filter\rules()` 和 `filter\check()` 是内部函数，供 `input()` 和 `filter()` 共同使用，不推荐直接调用。
 
 
 ---

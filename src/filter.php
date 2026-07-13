@@ -1,96 +1,64 @@
 <?php
 declare(strict_types=1);
 namespace ff;
+
+use function ff\filter\{check, rules};
+
 /**
- * 验证并转换数据。按顺序应用规则，任意验证失败返回 null。
- * 内置规则: int|str|email|url|number|json|bool，通过 container('#filter') 扩展自定义规则。
+ * 验证并转换数据。组合 type + empty + check 规则，失败返回 null。
+ * 参数结构与 input 单字段 $set 格式一致，不支持 from/key/null/error/defaults。
+ * 内部通过 filter\rules() 解析规则、filter\check() 执行类型转换与验证。
  * ```
- * filter('123', 'int');                          // 类型转换: 返回 123 (int)
- * filter('true', 'bool');                        // 类型转换: 返回 true
- * filter('hello@example.com', 'email');           // 验证: 返回邮箱字符串
- * filter(3, 'int', '>5');                        // 参数化验证: 返回 null (3不大于5)
- * filter('abc', fn($v) => strlen($v) > 2);       // 自定义闭包: 返回 'abc'
- * filter('150', 'int,>0,<200');                  // 组合规则: 返回 150
- * container('#filter.phone', [null, null, [fn($v) => preg_match('/^1\d{10}$/', $v)]]);
- * filter('13800138000', 'phone');                 // 自定义规则: 返回 '13800138000'
+ * filter('123', 'int');                                     // 123
+ * filter('abc', 'int');                                     // null（type 转换失败）
+ * filter('test@example.com', 'email');                      // 'test@example.com'
+ * filter('bad', 'email');                                   // null
+ * filter(20, ['int', 'digit' => ['op' => '>=', 'value' => 18]]); // 20
+ * filter(15, ['int', 'digit' => ['op' => '>=', 'value' => 18]]); // null
+ * filter('abc', fn($v) => strlen($v) > 2);                 // 'abc'
+ * filter('ab', fn($v) => strlen($v) > 2);                  // null
+ * filter('', ['str', 'empty' => 'default', 'default' => 'N/A']); // 'N/A'
  * ```
- * @param mixed $var 待验证的数据
- * @param string|array|callable ...$rules 验证规则：
- *        - 预定义类型: 'int', 'str', 'email', 'url', 'json', 'bool'
- *        - 参数化规则: '>100', '<50', '>=18', '<=99'
- *        - 逗号分隔: 'int,>0,<100'
- *        - 自定义函数: fn($v) => $v > 0
- *        - 数组格式: ['number', ['opt' => '>', 'number' => 100]]
- * @return mixed 验证通过返回转换后的值，失败返回 null
+ * @param mixed                 $var 待验证的值
+ * @param string|array|callable $set type/check/empty 规则，与 input 单字段规则格式一致
+ * @return mixed 通过返回值，失败返回 null
  */
-function filter(mixed $var, string|array|callable ...$rules): mixed{
-	if(empty($rules)) return $var;
-	static $defaultRules = [
-		'int' => [null, fn($v) => (int)$v, null],
-		'str' => [null, fn($v) => (string)$v, null],
-		'email' => [null, null, [fn($v) => filter_var($v, FILTER_VALIDATE_EMAIL)]],
-		'url' => [null, null, [fn($v) => filter_var($v, FILTER_VALIDATE_URL)]],
-		'number' => [
-			fn($rule) => preg_match('/^([><=]+)(\d+)$/', $rule, $matches) ? ['opt' => $matches[1], 'number' => (int)$matches[2]] : false, null, [
-				fn($v, $params) => match ($params['opt']??null) {
-					'>' => $v > $params['number'],
-					'<' => $v < $params['number'],
-					'>=' => $v >= $params['number'],
-					'<=' => $v <= $params['number'],
-					default => true
-				},
-			],
-		],
-		'json' => [null, fn($v) => json_decode($v, true), null],
-		'bool' => [null, fn($v) => match (strtolower((string)$v)) {
-			'1', 'true', 'yes', 'on' => true,
-			'0', 'false', 'no', 'off' => false,
-			default => null
-		}, null],
-	];
-	$rulesConfig = [...$defaultRules, ...(container('#filter') ?? [])];
-	$converter = null;
-	$validators = [];
-	foreach($rules as $dirty){
-		if(is_callable($dirty)){
-			$validators[] = [$dirty];
-			continue;
+function filter(mixed $var, array|string|callable $set = []): mixed{
+	if(empty($set)) return $var;
+	$config = ['check' => [], 'error' => []];
+	foreach(rules(is_array($set) ? $set : [$set]) as $rule){
+		[$name, $_set] = $rule;
+		match ($name) {
+			'type', 'default' => $config[$name] = $_set,
+			'empty' => $config[$name] = match (true) {
+				is_array($_set) => $_set,
+				in_array($_set, ['remove', 'throw', 'default']) => ['fail' => $_set],
+				default => ['fail' => 'default', 'default' => $_set],
+			},
+			'error' => $config['error'] = match (true) {
+				is_array($_set) => $_set,
+				is_int($_set) => ['code' => $_set],
+				is_string($_set) => ['message' => $_set],
+				default => [],
+			},
+			'check' => $config['check'][] = [$_set, $rule[2] ?? null],
+			default => throw new \InvalidArgumentException("filter 不支持规则 '$name'"),
+		};
+	}
+	$gen = check($var, $config);
+	foreach($gen as [$name, $r]){
+		if('empty' === $name){
+			if($r['fail'] === 'remove') return null;
+			if($r['fail'] === 'throw') return null;
 		}
-		if(is_string($dirty)){
-			foreach(explode(',', $dirty) as $part){
-				$part = trim($part);
-				$parsed = false;
-				foreach($rulesConfig as [$parse, $convert, $vs]){
-					if($parse){
-						$params = $parse($part);
-						if($params !== false){
-							$parsed = true;
-							if($convert) $converter = $convert;
-							if($vs) $validators[] = [$vs, $params];
-							break;
-						}
-					} elseif(isset($rulesConfig[$part])){// 处理没有解析器的规则，如 'int', 'str'
-						[, $convert, $vs] = $rulesConfig[$part];
-						if($convert) $converter = $convert;
-						if($vs) $validators[] = [$vs, null];
-						$parsed = true;
-						break;
-					}
-				}
-				if(!$parsed) return null;
-			}
+		elseif(is_bool($r)){
+			if(!$r) return null;
 		}
-		elseif(is_array($dirty) && isset($rulesConfig[$dirty[0] ?? ''])){
-			[, $convert, $vs] = $rulesConfig[$dirty[0]];
-			if(isset($convert)) $converter = $convert;
-			if(isset($vs)) $validators[] = [$vs, $dirty[1] ?? null];
+		elseif(is_array($r) && count($r) === 2){
+			[$action, $opts] = $r;
+			if(is_bool($action)) $action = $action ? 'pass' : 'throw';
+			if(in_array($action, ['throw', 'default', 'remove'])) return null;
 		}
 	}
-	if($converter) $var = $converter($var);
-	foreach($validators as [$fns, $params]){
-		foreach($fns as $fn) if(!$fn($var, $params)) return null;
-	}
-	return $var;
+	return $gen->getReturn();
 }
-
-
