@@ -265,4 +265,17 @@ test('error 字符串 message', function(){
 	return $v instanceof \RuntimeException && $v->getMessage() === '出错了';
 });
 
+// ============================================================
+// 28. parse 简写规则
+// ============================================================
+test('>18 数组格式', input(['age' => ['int', '>18']], ['from' => 'query']), ['age' => 25]);
+test('>18 逗号简写', input(['age' => 'int,>18'], ['from' => 'query']), ['age' => 25]);
+test('>18 失败', function(){
+	input(['age' => ['int', '>18']], ['from' => fn($k) => '15']);
+}, fn($v) => $v instanceof \RuntimeException);
+test('>=0 简写', input(['num' => ['int', '>=0', 'body']]), ['num' => 0]);
+test('<100 简写', input(['code' => ['int', '<100', 'body']]), ['code' => 0]);
+test('=0 简写', input(['code' => ['int', '=0', 'body']]), ['code' => 0]);
+test('!=0 简写', input(['id' => ['int', '!=0', 'body']]), ['id' => 456]);
+
 test();

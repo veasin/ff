@@ -332,7 +332,9 @@ $all  = from(null, 'header');     // 整个来源
 filter('150', 'int');                                        // 类型转换
 filter('test@example.com', 'email');                         // 验证通过
 filter('bad', 'email');                                      // 验证失败: null
-filter(20, ['int', 'digit' => ['op' => '>=', 'value' => 18]]); // 参数化验证
+filter(20, ['int', 'cmp' => ['op' => '>=', 'value' => 18]]); // 参数化验证
+filter(20, ['int', '>=18']);                                  // parse 简写
+filter('hello', ['str', '>=3']);                              // 字符串长度比较
 filter($v, fn($v) => strlen($v) > 2);                       // 自定义闭包
 
 // 自定义 check 规则注册到 #input.check，与 input 共享

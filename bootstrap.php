@@ -41,14 +41,17 @@ container([
 			'base64' => fn($v) => base64_decode((string)$v, true) ?: null,
 		],
 		'check' => [
-			'digit' => fn($v, $p) => match ($p['op'] ?? null) {
-				'=' => $v == $p['value'],
-				'!=' => $v != $p['value'],
-				'>' => $v > $p['value'],
-				'<' => $v < $p['value'],
-				'>=' => $v >= $p['value'],
-				'<=' => $v <= $p['value'],
-				default => true,
+			'cmp' => function($v, $p){
+				$left = is_numeric($v) ? $v : strlen($v);
+				return match ($p['op']) {
+					'=' => $left == $p['value'],
+					'!=' => $left != $p['value'],
+					'>' => $left > $p['value'],
+					'<' => $left < $p['value'],
+					'>=' => $left >= $p['value'],
+					'<=' => $left <= $p['value'],
+					default => true,
+				};
 			},
 			'filter_var' => fn($v, $p) => filter_var($v, $p['filter'], $p['flags'] ?? 0) !== false,
 			'number' => is_numeric(...),
@@ -72,6 +75,9 @@ container([
 			'url' => ['filter_var' => ['filter' => FILTER_VALIDATE_URL]],
 			'ip-v4' => ['filter_var' => ['filter' => FILTER_VALIDATE_IP, 'flags' => FILTER_FLAG_IPV4]],
 			'ip-v6' => ['filter_var' => ['filter' => FILTER_VALIDATE_IP, 'flags' => FILTER_FLAG_IPV6]],
+		],
+		'parse' => [
+			'/^(>=?|<=?|!=|=)(\d+(?:\.\d+)?)$/' => fn($m) => ['cmp' => ['op' => $m[1], 'value' => (float)$m[2]]],
 		],
 	],
 	'^#out' => ['type' => 'json', 'emit' => container('#mode:cli') ? 'cli' : 'http'],

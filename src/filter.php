@@ -13,8 +13,10 @@ use function ff\filter\{check, rules};
  * filter('abc', 'int');                                     // null（type 转换失败）
  * filter('test@example.com', 'email');                      // 'test@example.com'
  * filter('bad', 'email');                                   // null
- * filter(20, ['int', 'digit' => ['op' => '>=', 'value' => 18]]); // 20
- * filter(15, ['int', 'digit' => ['op' => '>=', 'value' => 18]]); // null
+ * filter(20, ['int', 'cmp' => ['op' => '>=', 'value' => 18]]); // 20
+ * filter(15, ['int', 'cmp' => ['op' => '>=', 'value' => 18]]); // null
+ * filter(20, ['int', '>=18']);                               // parse 简写: 20
+ * filter('hello', ['str', '>=3']);                           // parse 长度比较: 'hello'
  * filter('abc', fn($v) => strlen($v) > 2);                 // 'abc'
  * filter('ab', fn($v) => strlen($v) > 2);                  // null
  * filter('', ['str', 'empty' => 'default', 'default' => 'N/A']); // 'N/A'

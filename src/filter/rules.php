@@ -10,7 +10,7 @@ use function ff\container;
  * ```
  * rules(['int', 'body']);                                    // [['type','int'], ['from','body']]
  * rules(['str', 'email']);                                   // [['type','str'], ['check','email',null]]
- * rules(['str', 'digit' => ['op' => '>=', 'value' => 18]]); // [['type','str'], ['check','digit',[...]]]
+ * rules(['str', 'cmp' => ['op' => '>=', 'value' => 18]]); // [['type','str'], ['check','cmp',[...]]]
  * rules(['name' => ['str']]);                                // ['name' => ['str']]
  * rules([fn($v) => $v > 0]);                                // [['check', closure, null]]
  * ```
@@ -23,6 +23,7 @@ function rules(array $set): array{
 	$typeRules = container('#input.type');
 	$checkRules = container('#input.check');
 	$abbrRules = container('#input.abbr');
+	$parseRules = null;
 	foreach($set as $key => $item){
 		if(is_int($key) && !is_string($item) && is_callable($item)) $r[] = ['check', $item, null];
 		elseif(is_int($key) && is_string($item)){
@@ -44,7 +45,18 @@ function rules(array $set): array{
 				if(isset($typeRules[$k])) $r[] = ['type', $k];
 				elseif(isset($checkRules[$k])) $r[] = ['check', $k, $v];
 				elseif($v !== null) $r[] = [$k, $v];
-				else throw new \InvalidArgumentException("Unknown rule: $k");
+				else{
+					$parseRules ??= container('#input.parse') ?? [];
+					$matched = false;
+					foreach($parseRules as $pattern => $parser){
+						if(preg_match($pattern, $k, $m)){
+							$r = [...$r, ...rules($parser($m))];
+							$matched = true;
+							break;
+						}
+					}
+					if(!$matched) throw new \InvalidArgumentException("Unknown rule: $k");
+				}
 			}
 		}
 		elseif(is_string($key)){

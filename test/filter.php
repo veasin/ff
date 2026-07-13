@@ -43,13 +43,15 @@ test('ip-v6 通过', filter('::1', ['str', 'ip-v6']), '::1');
 test('ip-v6 失败', filter('not-ip', ['str', 'ip-v6']), null);
 
 // ============================================================
-// 5. digit check（参数化）
+// 5. cmp check（参数化）
 // ============================================================
-test('digit >=18 通过', filter(20, ['int', 'digit' => ['op' => '>=', 'value' => 18]]), 20);
-test('digit >=18 失败', filter(15, ['int', 'digit' => ['op' => '>=', 'value' => 18]]), null);
-test('digit <100 通过', filter(50, ['int', 'digit' => ['op' => '<', 'value' => 100]]), 50);
-test('digit =0 通过', filter(0, ['int', 'digit' => ['op' => '=', 'value' => 0]]), 0);
-test('digit =0 失败', filter(1, ['int', 'digit' => ['op' => '=', 'value' => 0]]), null);
+test('cmp >=18 通过', filter(20, ['int', 'cmp' => ['op' => '>=', 'value' => 18]]), 20);
+test('cmp >=18 失败', filter(15, ['int', 'cmp' => ['op' => '>=', 'value' => 18]]), null);
+test('cmp <100 通过', filter(50, ['int', 'cmp' => ['op' => '<', 'value' => 100]]), 50);
+test('cmp =0 通过', filter(0, ['int', 'cmp' => ['op' => '=', 'value' => 0]]), 0);
+test('cmp =0 失败', filter(1, ['int', 'cmp' => ['op' => '=', 'value' => 0]]), null);
+test('cmp 字符串长度通过', filter('hello', ['str', 'cmp' => ['op' => '>=', 'value' => 3]]), 'hello');
+test('cmp 字符串长度失败', filter('hi', ['str', 'cmp' => ['op' => '>=', 'value' => 3]]), null);
 
 // ============================================================
 // 6. 闭包检查
@@ -99,8 +101,28 @@ test('key 规则报错', function(){
 // ============================================================
 // 11. 组合规则
 // ============================================================
-test('类型+check', filter('5', ['int', 'digit' => ['op' => '>=', 'value' => 0]]), 5);
-test('类型+check 失败', filter('5', ['int', 'digit' => ['op' => '>=', 'value' => 10]]), null);
+test('类型+check', filter('5', ['int', 'cmp' => ['op' => '>=', 'value' => 0]]), 5);
+test('类型+check 失败', filter('5', ['int', 'cmp' => ['op' => '>=', 'value' => 10]]), null);
 test('类型+空值+check', filter('', ['str', 'empty' => 'default', 'default' => 'N/A']), 'N/A');
+
+// ============================================================
+// 12. parse 简写规则
+// ============================================================
+test('>18 通过', filter(20, ['int', '>18']), 20);
+test('>18 失败', filter(15, ['int', '>18']), null);
+test('>=0 通过', filter(5, ['int', '>=0']), 5);
+test('>=0 0通过', filter(0, ['int', '>=0']), 0);
+test('<100 通过', filter(50, ['int', '<100']), 50);
+test('<100 失败', filter(150, ['int', '<100']), null);
+test('<=100 通过', filter(100, ['int', '<=100']), 100);
+test('=0 通过', filter(0, ['int', '=0']), 0);
+test('=0 失败', filter(1, ['int', '=0']), null);
+test('!=0 通过', filter(5, ['int', '!=0']), 5);
+test('!=0 失败', filter(0, ['int', '!=0']), null);
+test('>18 逗号简写', filter(20, 'int,>18'), 20);
+test('>18.5 浮点通过', filter(19.0, ['float', '>18.5']), 19.0);
+test('>18.5 浮点失败', filter(18.0, ['float', '>18.5']), null);
+test('>=3 字符串长度通过', filter('hello', ['str', '>=3']), 'hello');
+test('>=3 字符串长度失败', filter('hi', ['str', '>=3']), null);
 
 test();
