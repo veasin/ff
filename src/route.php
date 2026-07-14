@@ -108,8 +108,7 @@ namespace ff;
  */
 function route(null|bool|string|array $match = null, array|callable ...$fns): ?array{
 	if(0 === func_num_args()){
-		$deferred = container('#route.deferred');
-		if(!is_array($deferred)) return null;
+		if(!is_array($deferred = container('#route.deferred'))) return null;
 		container('#route.deferred', null);
 		$routes = [];
 		foreach($deferred as $item) $routes[$item[0]] = $item[1];
@@ -122,12 +121,12 @@ function route(null|bool|string|array $match = null, array|callable ...$fns): ?a
 	foreach($routes as $key => $fn){
 		if(is_int($key)){
 			if(isset($normalized['*'])){
-				$normalized['*'] = [...$normalized['*'], ...(!is_array($fn) ? [$fn] : $fn)];
+				$normalized['*'] = array_merge($normalized['*'], (array)$fn);
 				continue;
 			}
 			$key = '*';
 		}
-		$list = !is_array($fn) ? [$fn] : $fn;
+		$list = (array)$fn;
 		$stack = [];
 		$subs = [];
 		foreach($list as $k => $v){
@@ -142,49 +141,70 @@ function route(null|bool|string|array $match = null, array|callable ...$fns): ?a
 			$normalized[$key] = $list;
 			continue;
 		}
-		[$method, $path] = !str_contains($key, ':') ? ['', $key] : explode(':', $key, 2);
+		[$method, $path] = str_contains($key, ':') ? explode(':', $key, 2) : ['', $key];
 		$pending = [];
 		foreach($subs as $sk => $e) $pending[] = [$sk, $e['h'], $method, $path, array_slice($stack, 0, $e['p']), array_slice($stack, $e['p'])];
 		while($pending){
 			[$sm, $sfn, $pM, $pP, $pBef, $pAft] = array_shift($pending);
-			[$sm_m, $sm_u] = !str_contains($sm, ':') ? [$pM, $sm] : explode(':', $sm, 2);
+			[$sm_m, $sm_u] = str_contains($sm, ':') ? explode(':', $sm, 2) : [$pM, $sm];
 			if($sm_m === '') $sm_m = $pM;
 			$accPath = rtrim($pP, '/') . ($sm_u ? "/$sm_u" : '');
-			if(is_array($sfn)){
-				$is = [];
-				$iss = [];
-				foreach($sfn as $k2 => $v2){
-					if(is_string($k2)) $iss[$k2] = ['h' => $v2, 'p' => count($is)];
-					elseif(is_array($v2)){
-						if(!array_is_list($v2)) foreach($v2 as $sk => $sv) $iss[$sk] = ['h' => $sv, 'p' => count($is)];
-						else foreach($v2 as $item) if(is_callable($item)) $is[] = $item;
-					}
-					elseif(is_callable($v2)) $is[] = $v2;
+			$is = [];
+			$iss = [];
+			foreach((array)$sfn as $k2 => $v2){
+				if(is_string($k2)) $iss[$k2] = ['h' => $v2, 'p' => count($is)];
+				elseif(is_array($v2)){
+					if(!array_is_list($v2)) foreach($v2 as $sk => $sv) $iss[$sk] = ['h' => $sv, 'p' => count($is)];
+					else foreach($v2 as $item) if(is_callable($item)) $is[] = $item;
 				}
-				if($iss){
-					foreach($iss as $ik => $ie) $pending[] = [$ik, $ie['h'], $sm_m, $accPath, [...$pBef, ...array_slice($is, 0, $ie['p'])], [...array_slice($is, $ie['p']), ...$pAft]];
-					continue;
-				}
-				$normalized["$sm_m:$accPath"] = [...$pBef, ...$is, ...$pAft];
+				elseif(is_callable($v2)) $is[] = $v2;
 			}
-			else $normalized["$sm_m:$accPath"] = [...$pBef, $sfn, ...$pAft];
+			if($iss){
+				foreach($iss as $ik => $ie) $pending[] = [$ik, $ie['h'], $sm_m, $accPath, [...$pBef, ...array_slice($is, 0, $ie['p'])], [...array_slice($is, $ie['p']), ...$pAft]];
+				continue;
+			}
+			$normalized["$sm_m:$accPath"] = [...$pBef, ...$is, ...$pAft];
 		}
 	}
-	$deferred = container('#route.deferred');
-	if(is_array($deferred)){
+	if(is_array($deferred = container('#route.deferred'))){
 		foreach($normalized as $m => $fn) $deferred[] = [$m, $fn];
 		return container('#route.deferred', $deferred);
 	}
+	static $fnCompile = null;
+	$fnCompile ??= function(string $path): array{
+		$segments = array_filter(explode('/', trim($path, '/')));
+		$withNames = $withoutNames = '';
+		$wildcard = false;
+		foreach($segments as $seg){
+			if($seg === '*'){
+				$withNames .= '(?:/(?:.*))?';
+				$withoutNames .= '(?:/(?:.*))?';
+				$wildcard = true;
+				continue;
+			}
+			if(($seg[0] ?? '') === '{' && ($seg[-1] ?? '') === '}'){
+				$name = trim($seg, ':{}');
+				$withNames .= '/(?P<' . $name . '>[^/]+)';
+				$withoutNames .= '/(?:[^/]+)';
+				continue;
+			}
+			$withNames .= '/' . preg_quote($seg, '#');
+			$withoutNames .= '/' . preg_quote($seg, '#');
+		}
+		if(!$wildcard){
+			if($withNames === '') $withNames = '/?';
+			if($withoutNames === '') $withoutNames = '/?';
+		}
+		return [$withNames, $withoutNames];
+	};
 	$handlers = [];
 	$matchedKeys = [];
 	$currentMethod = from('method', 'input');
 	$params = from(null, 'params');
-	$reqSegments = $currentMethod === 'cli' ? [] : array_values(array_filter(explode('/', parse_url(from('uri', 'input'), PHP_URL_PATH) ?: '/')));
-	foreach($normalized as $m => $fn){
-		[$method, $uri] = !str_contains($m, ':') ? ['', $m] : explode(':', $m, 2);
-		$method = strtolower($method);
-		if($uri === '') $uri = '/';
-		if($method === 'cli'){
+	if($currentMethod === 'cli'){
+		foreach($normalized as $m => $fn){
+			[$method] = str_contains($m, ':') ? explode(':', $m, 2) : [''];
+			if($method !== 'cli') continue;
 			$routeArgs = args(substr($m, 4));
 			$matched = true;
 			foreach($routeArgs as $k => $v){
@@ -194,36 +214,73 @@ function route(null|bool|string|array $match = null, array|callable ...$fns): ?a
 				}
 			}
 			if($matched){
-				$handlers = [...$handlers, ...is_array($fn) ? $fn : [$fn]];
+				foreach((array)$fn as $f) $handlers[] = $f;
 				$matchedKeys[] = $m;
 			}
-			continue;
 		}
-		if($method !== '*' && $method !== '' && $method !== $currentMethod) continue;
-		$routeSegments = array_values(array_filter(explode('/', trim($uri))));
-		$isWildcard = end($routeSegments) === '*';
-		$reqIndex = 0;
-		$param = [];
-		foreach($routeSegments as $route){
-			if($route === '*'){
-				if($isWildcard) $reqIndex = count($reqSegments);
+		container('#in.params', $params);
+		container('#route.result', $handlers ? middleware(...$handlers) : null);
+		return $matchedKeys ?: null;
+	}
+	$reqUri = rtrim(parse_url(from('uri', 'input'), PHP_URL_PATH) ?: '/', '/') ?: '/';
+	$reqPath = ltrim($reqUri, '/');
+	static $routeCache = [], $cacheKey = null;
+	$currentCacheKey = md5(serialize(array_keys($normalized)));
+	if($cacheKey !== $currentCacheKey){
+		$cacheKey = $currentCacheKey;
+		$rInfo = [];
+		$combinedParts = [];
+		foreach($normalized as $m => $fn){
+			[$method, $uri] = str_contains($m, ':') ? explode(':', $m, 2) : ['', $m];
+			$method = strtolower($method);
+			if($uri === '') $uri = '/';
+			if($method === 'cli'){
+				$rInfo[$m] = ['method' => $method, 'exact' => true, 'path' => '', 'cli' => true];
 				continue;
 			}
-			$p = $route[0] ?? '';
-			$req = $reqSegments[$reqIndex] ?? null;
-			if($req === null) break;
-			if($p === '{' && ($route[-1] ?? '') === '}'){
-				$param[trim($route, ':{}')] = $req;
-				$reqIndex++;
+			$path = trim($uri, '/');
+			if(!str_contains($path, '{') && !str_contains($path, '*')) $rInfo[$m] = ['method' => $method, 'exact' => true, 'path' => $path];
+			else{
+				[$with, $without] = $fnCompile($uri);
+				$rInfo[$m] = ['method' => $method, 'exact' => false, 'regex' => '#^' . $with . '$#'];
+				$combinedParts[] = '(' . $without . ')';
+			}
+		}
+		$combinedRegex = $combinedParts ? '#^(?:' . implode('|', $combinedParts) . ')$#' : null;
+		$routeCache[$currentCacheKey] = ['info' => $rInfo, 'combined' => $combinedRegex];
+	}
+	$cache = $routeCache[$currentCacheKey];
+	$rInfo = $cache['info'];
+	if($cache['combined'] && preg_match($cache['combined'], $reqUri)){
+		foreach($normalized as $m => $fn){
+			$info = $rInfo[$m] ?? null;
+			if($info === null || isset($info['cli'])) continue;
+			$method = $info['method'];
+			if($method !== '*' && $method !== '' && $method !== $currentMethod) continue;
+			if($info['exact']){
+				if($info['path'] === $reqPath){
+					foreach((array)$fn as $f) $handlers[] = $f;
+					$matchedKeys[] = $m;
+				}
 				continue;
 			}
-			if($route !== $req) continue;
-			$reqIndex++;
+			if(preg_match($info['regex'], $reqUri, $rm)){
+				foreach($rm as $k => $v) if(!is_int($k)) $params[$k] = $v;
+				foreach((array)$fn as $f) $handlers[] = $f;
+				$matchedKeys[] = $m;
+			}
 		}
-		if($reqIndex === count($reqSegments) && ($isWildcard || $reqIndex === count($routeSegments))){
-			$params = [...$params, ...$param];
-			$handlers = [...$handlers, ...is_array($fn) ? $fn : [$fn]];
-			$matchedKeys[] = $m;
+	}
+	else{
+		foreach($normalized as $m => $fn){
+			$info = $rInfo[$m] ?? null;
+			if($info === null || isset($info['cli'])) continue;
+			$method = $info['method'];
+			if($method !== '*' && $method !== '' && $method !== $currentMethod) continue;
+			if($info['exact'] && $info['path'] === $reqPath){
+				foreach((array)$fn as $f) $handlers[] = $f;
+				$matchedKeys[] = $m;
+			}
 		}
 	}
 	container('#in.params', $params);

@@ -1,7 +1,7 @@
 <?php
 require __DIR__ . '/../vendor/autoload.php';
 
-use function ff\{container, input, route, test};
+use function ff\{container, from, route, test};
 
 test('路由 - 基础匹配', function(){
 	container("#in.input", ['method' => 'get', 'uri' => '/users/123']);
@@ -25,13 +25,13 @@ test('路由 - 方法不匹配', function(){
 }, null);
 test('路由 - 参数提取', function(){
 	container("#in.input", ['method' => 'get', 'uri' => '/users/123']);
-	return route('get:/users/{id}', fn($next) => input('id', 'params'));
+	return route('get:/users/{id}', fn($next) => from('id', 'params'));
 }, ['get:/users/{id}']);
 test('路由 - 多段参数', function(){
 	container("#in.input", ['method' => 'get', 'uri' => '/users/123/edit']);
 	return route('get:/users/{id}/{action}', fn($next) => [
-		'id' => input('id', 'params'),
-		'action' => input('action', 'params'),
+		'id' => from('id', 'params'),
+		'action' => from('action', 'params'),
 	]);
 }, ['get:/users/{id}/{action}']);
 test('路由 - 不匹配返回null', function(){
@@ -41,7 +41,7 @@ test('路由 - 不匹配返回null', function(){
 test('路由 - params容器写入', function(){
 	container("#in.input", ['method' => 'get', 'uri' => '/users/456']);
 	route('get:/users/{id}', function($next){});
-	return input('id', 'params');
+	return from('id', 'params');
 }, '456');
 test('路由 - CLI模式匹配', function(){
 	container("#in.input", [
@@ -198,7 +198,7 @@ test('路由 - 方案一：组前缀 参数提取', function(){
 	container(null);
 	container("#in.input", ['method' => 'get', 'uri' => '/root/abc/game/999/hello']);
 	return route(['get:/root/{root}/game/{id}/'=>[
-		'hello' => fn($next) => input('root', 'params') . '-' . input('id', 'params'),
+		'hello' => fn($next) => from('root', 'params') . '-' . from('id', 'params'),
 	]]);
 }, ['get:/root/{root}/game/{id}/hello']);
 test('路由 - 方案二：智能子路由展开', function(){
