@@ -422,7 +422,7 @@ $data  = from(['id' => 0, 'name' => '?'], 'query');      // map 批量读取 + �
 
 ```php
 // 注册自定义来源
-container('^#ext.from.session', fn() => $_SESSION);
+container('#ext.from.session', fn() => $_SESSION);
 $session = from('session', 'foo'); // → ext('from', 'session') → $_SESSION['foo']
 ```
 
