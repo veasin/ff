@@ -11,7 +11,7 @@
 > - 流程控制：[route](#route---路由匹配) | [middleware](#middleware---中间件执行引擎) | [hump](#hump---链式中间件执行器) | [hook](#hook---钩子系统)
 > - 缓存：[cache](#cache---多级缓存链) | [apcu](#apcu---APCu-缓存驱动)
 > - 队列：[queue](#queue---队列操作) | [db](#db---数据库队列驱动)
-> - 数据库：[db](#db---数据库操作)
+> - 数据库：[db](#db---数据库操作) | [sql](#sql---sql-构建)
 > - HTTP客户端：[http](#http---http-请求)
 > - 国际化：[i18n](#i18n---多语言翻译)
 > - 开发调试：[log](#log---日志函数) | [test](#test---轻量级测试)
@@ -1074,6 +1074,27 @@ $user = db(sql::table('users')->where(['id' => 1])->select(), 'row');//查询
 $affected = db(sql::table('users')->where(['id' => 1])->update(['name' => 'Jane']), 'count');//更新
 $affected = db(sql::table('users')->where(['id' => 1])->delete(), 'count');//删除
 ```
+
+## sql - SQL 构建
+
+数组描述编译为 SQL 字符串，支持 MySQL/SQLite 方言。表达式中字符串默认作为字段引用（`` `name` ``），条件 kv 中字符串值作为字面量（`'text'`），ON kv 中作为字段引用。
+
+```php
+sql(['SELECT', 'fields' => ['id', 'name'], 'from' => 'user']);
+sql(['SELECT', 'from' => 'user', 'where' => ['id' => 1]]);
+sql(['INSERT', 'table' => 'user', 'value' => ['name' => 'vea', 'age' => 30]]);
+sql(['UPDATE', 'from' => 'user', 'set' => ['name' => 'newname'], 'where' => ['id' => 1]]);
+sql(['DELETE', 'from' => 'user', 'where' => ['status' => 0]]);
+// 方言与占位模式
+sql(['SELECT', 'from' => 'user', 'limit' => [10, 20]], 'sqlite');
+[$sql, $params] = sql(['SELECT', 'from' => 'user', 'where' => ['id' => 1]], ['param' => true]);
+```
+
+参数：
+- **`$query`**: `array` - 数组描述的 SQL 语句，首元素指定操作类型（SELECT/INSERT/UPDATE/DELETE/UNION/WITH）
+- **`$options`**: `string|array` - 方言名或选项数组。string 如 `'sqlite'`；array 支持 `'dialect'`（默认 `'mysql'`）、`'param'`（`true` 启用 `?` 占位模式，返回 `[$sql, $params]`）
+
+`$query` 完整参数格式说明见 [`doc/sql.md`](sql.md)。
 
 ---
 

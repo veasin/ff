@@ -23,14 +23,15 @@ use function ff\resource\pdo;
  * exec 模式：不经过预处理直接执行，失败返回 null，DDL 返回 true，有行数返回 int。
  * MySQL 多语句需在配置 options 中设置 PDO::MYSQL_ATTR_MULTI_STATEMENTS => true。
  * 连接委托 resource\pdo() 管理，通过 container('#db.{configName}') 配置，默认配置名 default
- * @param object|string                       $sql        SQL 语句或 SQL helper 对象
+ * @param object|string|array                 $sql        SQL 语句、SQL helper 对象或 sql() 数组
  * @param array|string|int|callable|bool|null $params     参数数组；传入字符串/整数/可调用/bool/null 时作为 mode
  * @param string|int|callable|bool|null       $mode       操作模式；params 为数组时跳过此位的参数被视为 configName
  * @param string|null                         $configName 数据库配置名称，默认 'default'
  * @return mixed 查询结果，失败返回 null
  */
-function db(object|string $sql, array|string|int|callable|bool|null $params = [], string|int|callable|bool|null $mode = null, ?string $configName = null): mixed{
+function db(object|string|array $sql, array|string|int|callable|bool|null $params = [], string|int|callable|bool|null $mode = null, ?string $configName = null): mixed{
 	if(!is_array($params)) [$configName, $mode, $params] = [$mode, $params, []];
+	if(is_array($sql)) $sql = sql($sql);
 	if(is_object($sql) && (get_class($sql) === 'ff\helpers\sql' || is_a($sql, 'ff\helpers\sql', true))) [$sql, $params] = [(string)$sql, $sql->params];
 	$configName = $configName ?? 'default';
 	$pdo = pdo($configName);

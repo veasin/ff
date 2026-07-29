@@ -70,6 +70,7 @@
       "src/queue.php",
       "src/queue/db.php",
       "src/resource/pdo.php",
+      "src/sql.php",
       "bootstrap.php"
     ]
   }

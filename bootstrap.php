@@ -85,6 +85,16 @@ container([
 			'/^(\d+)-(\d+)$/' => fn($m) => ['range' => [(int)$m[1], (int)$m[2]]],
 		],
 	],
+	'^#sql' => [
+		'sqlite' => [
+			'limitArray' => 'standard',
+			'replace' => 'INSERT OR REPLACE',
+			'onConflict' => 'ON CONFLICT DO UPDATE SET',
+			'lock' => false,
+			'straightJoin' => false,
+			'cube' => false,
+		],
+	],
 	'^#out' => ['type' => 'json', 'emit' => container('#mode:cli') ? 'cli' : 'http'],
 ]);
 hook('after', output(...));
