@@ -96,6 +96,7 @@ container([
 		],
 	],
 	'^#out' => ['type' => 'json', 'emit' => container('#mode:cli') ? 'cli' : 'http'],
+	'^#hook.[]' => ['after', 'end'],
 ]);
 hook('after', output(...));
 register_shutdown_function(hook(...));

@@ -885,12 +885,10 @@ hump('/path/to/file.php', $handler);//文件路径
 注册/触发分离的钩子系统，与容器集成。生命周期模式下 `output()` 等函数自动挂载。
 
 ```php
-hook(true);//开启钩子模式（持久级，默认序列 ['after', 'end']）
-hook(true, ['after', 'end']);//自定义默认序列
 hook('after', fn() => output(['status' => 'ok']));//注册回调（请求级）
-hook();//触发默认序列（after → end）
+hook();//触发 #hook.[] 序列（默认 after → end）
 hook('after');//触发单个钩子
-hook(['after', 'end']);//自定义触发顺序
+hook(['after', 'end']);//按序触发
 hook('custom', function() { echo 'hello'; });//独立注册
 hook('custom');//独立触发
 hook('after', null);//清空指定钩子
@@ -899,7 +897,8 @@ hook(null);//清空所有钩子
 
 容器配置：
 - **`#hook.{name}`**: `array` - 钩子回调列表，请求结束时 `container(null)` 自动清空
-- **`^#hook`**: `array` - 默认序列，持久级存储，跨请求保持
+- **`^#hook.[]`**: `array` - 持久级默认序列，`hook()` 无参时读取；可通过 `#hook.[]` 请求级覆盖
+- **`#hook.[]`**: `array` - 请求级序列覆盖，优先级高于 `^#hook.[]`
 
 ---
 

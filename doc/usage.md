@@ -492,9 +492,8 @@ hump(
 - 收尾代码不必在每个 handler 里重复
 
 ```php
-hook(true);                             // 开启，默认序列 ['after', 'end']
 hook('after', fn() => output());        // 注册
-hook();                                  // 触发默认序列
+hook();                                  // 触发 #hook.[] 序列
 hook('after', null);                     // 清空指定钩子
 hook(null);                              // 清空全部
 ```
