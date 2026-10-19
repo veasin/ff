@@ -77,8 +77,8 @@ function sql(array $query, string|array $options = []): string|array|null{
 				is_string($v) => $asLit ? $str($v) : $id($v),
 				is_array($v) => match(true){
 					$v === [] => "''",
-				$v[0] === 's' => $useParam ? $push($v[1]) : $str($v[1]),
-				$v[0] === 'RAW' => (string)($v[1] ?? ''),
+					$v[0] === 's' => $useParam ? $push($v[1]) : $str($v[1]),
+					$v[0] === 'RAW' => (string)($v[1] ?? ''),
 					is_string($v[0]) && strtoupper($v[0]) === 'SELECT' => '(' . ($compile($v) ?? '') . ')',
 					default => $expr($v),
 				},
@@ -128,7 +128,7 @@ function sql(array $query, string|array $options = []): string|array|null{
 			$args = array_slice($e, 1);
 			static $ops = ['gt' => '>', 'eq' => '=', 'ne' => '!=', 'lt' => '<', 'le' => '<=', 'ge' => '>=', 'like' => 'LIKE', 'add' => '+', 'sub' => '-', 'mul' => '*', 'div' => '/', 'mod' => '%'];
 			$opLower = strtolower($op);
-			if(isset($ops[$opLower])) return $val($args[0]) . ' ' . $ops[$opLower] . ' ' . $val($args[1]);
+			if(isset($ops[$opLower])) return $val($args[0]) . ' ' . $ops[$opLower] . ' ' . $val($args[1], true);
 			return match(true){
 				$op === 'RAW' => (string)($e[1] ?? ''),
 				$op === 's' => $val($e[1], true),
@@ -141,10 +141,10 @@ function sql(array $query, string|array $options = []): string|array|null{
 				in_array($op, ['and', 'AND'], true) => '(' . implode(' AND ', array_map($val, $args)) . ')',
 				in_array($op, ['or', 'OR'], true) => '(' . implode(' OR ', array_map($val, $args)) . ')',
 				in_array($op, ['in', 'IN'], true) => $val($args[0]) . ' IN (' . implode(', ', array_map(fn($a) => is_array($a) && is_string($a[0] ?? null) && strtoupper($a[0]) === 'SELECT' ? ($compile($a) ?? '')
-						: $val($a), array_slice($args, 1))) . ')',
+						: $val($a, true), array_slice($args, 1))) . ')',
 				in_array($op, ['not in', 'NOT IN'], true) => $val($args[0]) . ' NOT IN (' . implode(', ', array_map(fn($a) => is_array($a) && is_string($a[0] ?? null) && strtoupper($a[0]) === 'SELECT' ? ($compile($a) ?? '')
-						: $val($a), array_slice($args, 1))) . ')',
-				in_array($op, ['between', 'BETWEEN'], true) => $val($args[0]) . ' BETWEEN ' . $val($args[1]) . ' AND ' . $val($args[2]),
+						: $val($a, true), array_slice($args, 1))) . ')',
+				in_array($op, ['between', 'BETWEEN'], true) => $val($args[0]) . ' BETWEEN ' . $val($args[1], true) . ' AND ' . $val($args[2], true),
 				default => $op . '(' . implode(', ', array_map($val, $args)) . ')',
 			};
 		};
