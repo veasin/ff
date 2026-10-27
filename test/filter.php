@@ -201,4 +201,4 @@ test('已存在简写 aa|bb|cc 仍有效', filter('aa', ['str', 'aa|bb|cc']), 'a
 test('已存在简写 1..100 仍有效', filter(50, '1..100'), 50);
 test('已存在简写 email 仍有效', filter('test@example.com', 'email'), 'test@example.com');
 
-test();
+test() |> (fn($a)=>json_encode($a, JSON_UNESCAPED_UNICODE |JSON_UNESCAPED_SLASHES)) |> printf(...);

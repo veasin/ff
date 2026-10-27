@@ -74,4 +74,4 @@ test('config 数组覆盖 TTL 不影响前缀',
 	'arr_val'
 );
 
-test();
+test() |> (fn($a)=>json_encode($a, JSON_UNESCAPED_UNICODE |JSON_UNESCAPED_SLASHES)) |> printf(...);

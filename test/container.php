@@ -172,7 +172,7 @@ $singleResult = container('merge.singleWrite');
 test('嵌套key单写-父级合并', $singleResult['c'], 2);
 test('嵌套key单写-子级合并', $singleResult['a']['b'], 1);
 test('嵌套key单写-新值', $singleResult['a']['d'], 3);
-test();
+test() |> (fn($a)=>json_encode($a, JSON_UNESCAPED_UNICODE |JSON_UNESCAPED_SLASHES)) |> printf(...);
 // 最终清理
 container(null);
 container(null, true);

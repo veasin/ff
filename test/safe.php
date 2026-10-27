@@ -21,4 +21,4 @@ test('处理器匹配 default', safe(fn() => throw new \RuntimeException('runtim
 test('处理器不影响正常结果', safe(fn() => 99), 99);
 container('#safe', null); // 清理
 
-test();
+test() |> (fn($a)=>json_encode($a, JSON_UNESCAPED_UNICODE |JSON_UNESCAPED_SLASHES)) |> printf(...);

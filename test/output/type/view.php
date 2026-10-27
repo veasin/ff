@@ -29,4 +29,4 @@ test('view 无 file 返回 data', $result[0], []);
 $result = ext('out.type', 'view', [], ['file' => '/nonexistent']);
 test('view 不存在文件 返回 data', $result[0], []);
 
-test();
+test() |> (fn($a)=>json_encode($a, JSON_UNESCAPED_UNICODE |JSON_UNESCAPED_SLASHES)) |> printf(...);

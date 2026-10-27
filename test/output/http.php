@@ -37,4 +37,4 @@ http('test', ['code' => 200]);
 $result = ob_get_clean();
 test('NX header 自动附加', $result, 'test');
 
-test();
+test() |> (fn($a)=>json_encode($a, JSON_UNESCAPED_UNICODE |JSON_UNESCAPED_SLASHES)) |> printf(...);

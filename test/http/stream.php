@@ -35,4 +35,4 @@ test('Stream 驱动 连接失败', function(){
 	return $r === null;
 }, true);
 
-test();
+test() |> (fn($a)=>json_encode($a, JSON_UNESCAPED_UNICODE |JSON_UNESCAPED_SLASHES)) |> printf(...);

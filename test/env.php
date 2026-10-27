@@ -32,6 +32,6 @@ putenv('DB_HOST=from_server');
 test('服务器变量优先级', env('DB_HOST'), 'from_server');
 putenv('DB_HOST');
 
-test();
+test() |> (fn($a)=>json_encode($a, JSON_UNESCAPED_UNICODE |JSON_UNESCAPED_SLASHES)) |> printf(...);
 // 清理
 unlink(__DIR__ . '/../.env');

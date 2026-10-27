@@ -34,9 +34,7 @@ test('body - 旧值不再存在', $body1['b'] ?? null, null);
 container(null);
 container('#in.headers', ['content-type' => 'text/plain']);
 container('#in.raw', 'plain data');
-container('#in.content', [
-	'text/plain' => fn($raw) => ['parsed' => $raw, 'type' => 'custom'],
-]);
+container('^#ext.body.text/plain', fn($raw) => ['parsed' => $raw, 'type' => 'custom']);
 test('body - 自定义解析器', body()['parsed'], 'plain data');
 test('body - 自定义解析器type', body()['type'], 'custom');
 
@@ -44,4 +42,4 @@ container(null);
 container('#in.headers', ['content-type' => 'multipart/form-data']);
 test('body - multipart用$_POST', body(), fn($v) => isset($v['RAW']));
 
-test();
+test() |> (fn($a)=>json_encode($a, JSON_UNESCAPED_UNICODE |JSON_UNESCAPED_SLASHES)) |> printf(...);

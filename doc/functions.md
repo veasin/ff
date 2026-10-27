@@ -562,10 +562,10 @@ output();//无参触发发送（自动通过 hook 在 shutdown 时执行）
 ```
 
 **$set**：
-- **`code`**: `int` 默认 `200` 状态码（HTTP → 状态码，CLI → exit code）
+- **`code`**: `int` 默认 `200` 状态码
 - **`type`**: `string` 默认 `'json'` 输出格式，内置 `json`/`view`/`file`
 - **`file`**: `string` - 文件路径，`type=view` 时作模板，`type=file` 时作下载文件
-- **`headers`**: `array` 默认 `[]` 元数据键值对（HTTP 中作响应头，CLI 忽略）
+- **`headers`**: `array` 默认 `[]` 元数据键值对（响应头）
 - **`message`**: `string` 默认 `''` 状态描述
 - **`pretty`**: `bool` 默认 `false` JSON 是否美化输出
 
@@ -584,7 +584,7 @@ output($data, ['type' => 'xml']);
 
 ### 发送驱动
 
-emit 函数通过 ext 系统注册，签名 `fn(mixed $content, array $meta): void`。内置 `http`/`cli`：
+emit 函数通过 ext 系统注册，签名 `fn(mixed $content, array $meta): void`。内置 `http`：
 
 ```php
 // 注册自定义 emit（如写入文件）
@@ -607,10 +607,9 @@ container('^#ext.out', [
     ],
     'emit' => [
         'http' => \ff\output\http(...),
-        'cli'  => \ff\output\cli(...),
     ],
 ]);
-container('^#out', ['type' => 'json', 'emit' => PHP_SAPI === 'cli' ? 'cli' : 'http']);
+container('^#out', ['type' => 'json', 'emit' => 'http']);
 ```
 
 **ext 扩展点：**
@@ -621,7 +620,7 @@ container('^#out', ['type' => 'json', 'emit' => PHP_SAPI === 'cli' ? 'cli' : 'ht
 | `out.emit` | `string` 发送名 | `mixed $content, array $meta` | `fn(mixed $content, array $meta): void` | `void` |
 
 - **out.type**：格式化数据，返回 `[mixed $content, array $meta]`，`$meta` 中 `headers` 等元信息会传给 emit
-- **out.emit**：发送最终内容到目标（HTTP 响应 / CLI 输出），无返回值
+- **out.emit**：发送最终内容到目标（HTTP 响应），无返回值
 
 内置驱动（`bootstrap.php` 注册）：
 
@@ -631,11 +630,10 @@ container('^#out', ['type' => 'json', 'emit' => PHP_SAPI === 'cli' ? 'cli' : 'ht
 | `out.type` | `view` | `\ff\output\type\view(...)` | 视图模板 |
 | `out.type` | `file` | `\ff\output\type\file(...)` | 文件输出 |
 | `out.emit` | `http` | `\ff\output\http(...)` | HTTP 响应发送 |
-| `out.emit` | `cli` | `\ff\output\cli(...)` | CLI 输出 + exit |
 
 容器配置：
 - **`#out.type`**: `string` 默认 `'json'` 默认输出格式
-- **`#out.emit`**: `string` 默认 `'http'` 当前 emit 标识，CLI 默认 `'cli'`
+- **`#out.emit`**: `string` 默认 `'http'` 当前 emit 标识
 - **`#out.op`**: `array` 存储 `[$data, $meta]` 元组，由 `output()` 自动管理
 
 ---
@@ -644,7 +642,7 @@ container('^#out', ['type' => 'json', 'emit' => PHP_SAPI === 'cli' ? 'cli' : 'ht
 
 ## route - 路由匹配
 
-支持 RESTful 路由、参数占位符、通配符和 CLI 路由。内部使用 `middleware()` 执行匹配到的路由处理函数，支持阻断：不调 `$next` 则终止后续路由。
+支持 RESTful 路由、参数占位符、通配符。内部使用 `middleware()` 执行匹配到的路由处理函数，支持阻断：不调 `$next` 则终止后续路由。
 
 **返回值：** 匹配成功的路由键数组（`string[]`），未匹配返回 `null`。middleware 执行结果转存到 `#route.result`。
 
@@ -662,7 +660,7 @@ route('POST:/api/user', function() { ... });//POST 路由
 route(['get:/api/list' => fn() => 'list', 'post:/api/create' => fn() => 'create']);//路由映射数组
 route('GET:/api/*', function() { ... });//通配符路由
 route('/bare-path', fn($next) => 'match');//无方法前缀→继承父级(*)，匹配任意方法
-route('cli:verbose', function() { ... });//CLI 路由
+route('cli:verbose', function() { ... });//非 Web 路由由 ext 提供
 route(true);//开启延时模式
 route();//触发执行收集的路由，返回匹配的 key 数组
 route(null);//清空已收集的路由

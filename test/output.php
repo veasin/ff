@@ -121,5 +121,5 @@ test('无数据时 0 参静默跳过', function(){
 	return container('#out.captured');
 }, null);
 
-test();
+test() |> (fn($a)=>json_encode($a, JSON_UNESCAPED_UNICODE |JSON_UNESCAPED_SLASHES)) |> printf(...);
 container('^#ext.out.emit.cap', null);

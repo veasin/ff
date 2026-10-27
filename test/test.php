@@ -33,4 +33,4 @@ test('除零异常类型', fn() => 1 / 0, \DivisionByZeroError::class);
 test('除零闭包处理', fn() => 1 / 0, fn($v) => $v instanceof \DivisionByZeroError);
 // value抛异常 vs 具体值 - 预期失败
 //test('除零值对比', fn() => 1 / 0, '不会走到');
-test();
+test() |> (fn($a)=>json_encode($a, JSON_UNESCAPED_UNICODE |JSON_UNESCAPED_SLASHES)) |> printf(...);

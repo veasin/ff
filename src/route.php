@@ -2,7 +2,7 @@
 declare(strict_types=1);
 namespace ff;
 /**
- * 路由匹配，支持 CLI 和 Web 两种模式。
+ * 路由匹配，支持多协议分发。
  * 核心规则：未显式指定的部分从父级继承；顶级路由的隐式父级是 ['*', '/']
  * 路由键统一模型：`method:path`
  * - 无冒号 → 整个字符串为 path，method 继承父级
@@ -79,7 +79,7 @@ namespace ff;
  *         'deep' => fn($next) => ...,    // 最终 handler
  *         fn($next) => ...,              // 内层后置
  *     ],
- *     fn($next) => ...,                  // 外层后置
+ *     fn($next) => ...,                  // 外后置
  * ]]);
  * // → deep: [外前置, 内前置A, 内前置B, handler, 内后置, 外后置]
  * ```
@@ -99,6 +99,8 @@ namespace ff;
  * route(['GET:/some/*' => fn($next) => $next(),       // 调 $next 放行
  *        'GET:/some/action' => fn($next) => 'action']);// 继续执行
  * ```
+ * 支持 ext 扩展：domain='route'，handler 签名 fn(array $normalized, array $params, string $uri, string $method): ?array
+ * 返回 ['handlers' => callable[], 'keys' => string[], 'params' => array] 或 null（未处理时跳过）。
  * @param null|bool|string|array $match  匹配规则或路由映射数组
  *                                       true=开启延时模式
  *                                       null=清空已收集路由
@@ -118,17 +120,7 @@ function route(null|bool|string|array $match = null, array|callable ...$fns): ?a
 	if($match === null) return container('#route.deferred', null);
 	$routes = is_array($match) ? $match : [$match => $fns];
 	$normalized = [];
-	foreach($routes as $key => $fn){
-		if(is_int($key)){
-			if(isset($normalized['*'])){
-				$normalized['*'] = array_merge($normalized['*'], (array)$fn);
-				continue;
-			}
-			$key = '*';
-		}
-		$list = (array)$fn;
-		$stack = [];
-		$subs = [];
+	static $parse = function(array $list, &$stack, &$subs): void{
 		foreach($list as $k => $v){
 			if(is_string($k)) $subs[$k] = ['h' => $v, 'p' => count($stack)];
 			elseif(is_array($v)){
@@ -137,6 +129,21 @@ function route(null|bool|string|array $match = null, array|callable ...$fns): ?a
 			}
 			elseif(is_callable($v)) $stack[] = $v;
 		}
+	};
+	$methodProtocols =[];
+	foreach(container('^#route.methods') ?? [] as $proto => $mList){
+		if(is_string($mList)) $methodProtocols[$mList] = $proto;
+		else foreach($mList as $_method) $methodProtocols[$_method] = $proto;
+	}
+	foreach($routes as $key => $fn){
+		if(is_int($key)){
+			$normalized['*'] = array_merge($normalized['*'] ?? [], (array)$fn);
+			continue;
+		}
+		$list = (array)$fn;
+		$stack = [];
+		$subs = [];
+		$parse($list, $stack, $subs);
 		if(!$subs){
 			$normalized[$key] = $list;
 			continue;
@@ -148,17 +155,11 @@ function route(null|bool|string|array $match = null, array|callable ...$fns): ?a
 			[$sm, $sfn, $pM, $pP, $pBef, $pAft] = array_shift($pending);
 			[$sm_m, $sm_u] = str_contains($sm, ':') ? explode(':', $sm, 2) : [$pM, $sm];
 			if($sm_m === '') $sm_m = $pM;
-			$accPath = rtrim($pP, '/') . ($sm_u ? "/$sm_u" : '');
+			$proto = $methodProtocols[$sm_m] ?? $methodProtocols['*'] ?? 'default';
+			$accPath = ext("route.$proto", 'normalize',$pP, $sm_u);
 			$is = [];
 			$iss = [];
-			foreach((array)$sfn as $k2 => $v2){
-				if(is_string($k2)) $iss[$k2] = ['h' => $v2, 'p' => count($is)];
-				elseif(is_array($v2)){
-					if(!array_is_list($v2)) foreach($v2 as $sk => $sv) $iss[$sk] = ['h' => $sv, 'p' => count($is)];
-					else foreach($v2 as $item) if(is_callable($item)) $is[] = $item;
-				}
-				elseif(is_callable($v2)) $is[] = $v2;
-			}
+			$parse((array)$sfn, $is, $iss);
 			if($iss){
 				foreach($iss as $ik => $ie) $pending[] = [$ik, $ie['h'], $sm_m, $accPath, [...$pBef, ...array_slice($is, 0, $ie['p'])], [...array_slice($is, $ie['p']), ...$pAft]];
 				continue;
@@ -170,120 +171,15 @@ function route(null|bool|string|array $match = null, array|callable ...$fns): ?a
 		foreach($normalized as $m => $fn) $deferred[] = [$m, $fn];
 		return container('#route.deferred', $deferred);
 	}
-	static $fnCompile = null;
-	$fnCompile ??= function(string $path): array{
-		$segments = array_filter(explode('/', trim($path, '/')));
-		$withNames = $withoutNames = '';
-		$wildcard = false;
-		foreach($segments as $seg){
-			if($seg === '*'){
-				$withNames .= '(?:/(?:.*))?';
-				$withoutNames .= '(?:/(?:.*))?';
-				$wildcard = true;
-				continue;
-			}
-			if(($seg[0] ?? '') === '{' && ($seg[-1] ?? '') === '}'){
-				$name = trim($seg, ':{}');
-				$withNames .= '/(?P<' . $name . '>[^/]+)';
-				$withoutNames .= '/(?:[^/]+)';
-				continue;
-			}
-			$withNames .= '/' . preg_quote($seg, '#');
-			$withoutNames .= '/' . preg_quote($seg, '#');
-		}
-		if(!$wildcard){
-			if($withNames === '') $withNames = '/?';
-			if($withoutNames === '') $withoutNames = '/?';
-		}
-		return [$withNames, $withoutNames];
-	};
-	$handlers = [];
-	$matchedKeys = [];
 	$currentMethod = from('method', 'input');
-	$params = from(null, 'params');
-	if($currentMethod === 'cli'){
-		foreach($normalized as $m => $fn){
-			[$method] = str_contains($m, ':') ? explode(':', $m, 2) : [''];
-			if($method !== 'cli') continue;
-			$routeArgs = args(substr($m, 4));
-			$matched = true;
-			foreach($routeArgs as $k => $v){
-				if(!isset($params[$k]) || ($v !== '*' && $v !== true && $params[$k] !== $v)){
-					$matched = false;
-					break;
-				}
-			}
-			if($matched){
-				foreach((array)$fn as $f) $handlers[] = $f;
-				$matchedKeys[] = $m;
-			}
-		}
-		container('#in.params', $params);
-		container('#route.result', $handlers ? middleware(...$handlers) : null);
-		return $matchedKeys ?: null;
+	if($currentMethod !== '' && $currentMethod !== null){
+		$proto =$methodProtocols[$currentMethod] ??'default';
+		$result = ext("route.$proto", 'match', $normalized, from(null, 'params'), from('uri', 'input'), $currentMethod);
+		if($result !== null){
+			container('#in.params', $result['params']);
+			container('#route.result', $result['handlers'] ? middleware(...$result['handlers']) : null);
+			return $result['keys'] ?: null;
+		} else return null;
 	}
-	$reqUri = rtrim(parse_url(from('uri', 'input'), PHP_URL_PATH) ?: '/', '/') ?: '/';
-	$reqPath = ltrim($reqUri, '/');
-	static $routeCache = [], $cacheKey = null;
-	$currentCacheKey = md5(serialize(array_keys($normalized)));
-	if($cacheKey !== $currentCacheKey){
-		$cacheKey = $currentCacheKey;
-		$rInfo = [];
-		$combinedParts = [];
-		foreach($normalized as $m => $fn){
-			[$method, $uri] = str_contains($m, ':') ? explode(':', $m, 2) : ['', $m];
-			$method = strtolower($method);
-			if($uri === '') $uri = '/';
-			if($method === 'cli'){
-				$rInfo[$m] = ['method' => $method, 'exact' => true, 'path' => '', 'cli' => true];
-				continue;
-			}
-			$path = trim($uri, '/');
-			if(!str_contains($path, '{') && !str_contains($path, '*')) $rInfo[$m] = ['method' => $method, 'exact' => true, 'path' => $path];
-			else{
-				[$with, $without] = $fnCompile($uri);
-				$rInfo[$m] = ['method' => $method, 'exact' => false, 'regex' => '#^' . $with . '$#'];
-				$combinedParts[] = '(' . $without . ')';
-			}
-		}
-		$combinedRegex = $combinedParts ? '#^(?:' . implode('|', $combinedParts) . ')$#' : null;
-		$routeCache[$currentCacheKey] = ['info' => $rInfo, 'combined' => $combinedRegex];
-	}
-	$cache = $routeCache[$currentCacheKey];
-	$rInfo = $cache['info'];
-	if($cache['combined'] && preg_match($cache['combined'], $reqUri)){
-		foreach($normalized as $m => $fn){
-			$info = $rInfo[$m] ?? null;
-			if($info === null || isset($info['cli'])) continue;
-			$method = $info['method'];
-			if($method !== '*' && $method !== '' && $method !== $currentMethod) continue;
-			if($info['exact']){
-				if($info['path'] === $reqPath){
-					foreach((array)$fn as $f) $handlers[] = $f;
-					$matchedKeys[] = $m;
-				}
-				continue;
-			}
-			if(preg_match($info['regex'], $reqUri, $rm)){
-				foreach($rm as $k => $v) if(!is_int($k)) $params[$k] = $v;
-				foreach((array)$fn as $f) $handlers[] = $f;
-				$matchedKeys[] = $m;
-			}
-		}
-	}
-	else{
-		foreach($normalized as $m => $fn){
-			$info = $rInfo[$m] ?? null;
-			if($info === null || isset($info['cli'])) continue;
-			$method = $info['method'];
-			if($method !== '*' && $method !== '' && $method !== $currentMethod) continue;
-			if($info['exact'] && $info['path'] === $reqPath){
-				foreach((array)$fn as $f) $handlers[] = $f;
-				$matchedKeys[] = $m;
-			}
-		}
-	}
-	container('#in.params', $params);
-	container('#route.result', $handlers ? middleware(...$handlers) : null);
-	return $matchedKeys ?: null;
+	return null;
 }

@@ -99,15 +99,8 @@ function http(string $request,
 			parse_str($result['body'], $result['body']);
 		}
 		elseif($decode === null){
-			$parser = container("#in.content.$ct") ?? [];
-			if($parser) $result['body'] = $parser($result['body'], 'decode');
-			elseif(str_contains($ct, 'json')){
-				$d = json_decode($result['body'], true);
-				if(json_last_error() === JSON_ERROR_NONE) $result['body'] = $d;
-			}
-			elseif(str_contains($ct, 'urlencoded')){
-				parse_str($result['body'], $result['body']);
-			}
+			$ct = strtolower(trim(explode(';', $ct)[0]));
+			$result['body'] = ext('body', $ct, $result['body'], 'decode') ?? $result['body'];
 		}
 	}
 	return match ($mode) {

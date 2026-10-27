@@ -105,7 +105,7 @@ $id = input(['id' => ['int', 'params']]);
 - 三阶段管道：`output($data, $set)` 存储 → `output()` 触发格式化 → emit 发送
 - 自动通过 hook 在 shutdown 时发送（handler 末尾无需手动调 `output()`）
 - handler 末尾直接调，不需要 return；提前退出时需要 `return` 阻止后续代码
-- HTTP 下自动设置 Content-Type 和状态码，CLI 下自动映射 exit code
+- HTTP 下自动设置 Content-Type 和状态码
 
 ```php
 output(['status' => 'ok']);                 // JSON 200
@@ -537,8 +537,6 @@ if($result === null && !container('#safe')){
     // 处理器返回 null，说明是默认异常，不需要特殊处理
 }
 ```
-
-**args()** — CLI 参数解析底层，框架内部使用，正常项目中不应直接调用
 
 **test()** — 开发阶段测试验证，与请求流程无关
 

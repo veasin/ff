@@ -28,7 +28,7 @@ namespace ff;
  * @return mixed 读取时返回值，设置时返回 void
  */
 function container(array|string|null $key = null, mixed $value = null): mixed{
-	static $core = ['#mode:cli' => PHP_SAPI === 'cli'], $persist = [], $request = [];
+	static $persist = [], $request = [];
 	static $get = fn(array $arr, string $k) => array_reduce(explode('.', $k), fn($c, $p) => is_array($c) ? ($c[$p] ?? null) : null, $arr);
 	static $set = function(array &$arr, string $k, mixed $v): void{
 		$parts = explode('.', $k);
@@ -59,13 +59,12 @@ function container(array|string|null $key = null, mixed $value = null): mixed{
 		}
 		return $base;
 	};
-	static $read = function(string $key) use ($get, $parseKey, $merge, &$core, &$persist, &$request){
+	static $read = function(string $key) use ($get, $parseKey, $merge, &$persist, &$request){
 		[$k, $fromPersist, $execute] = $parseKey($key);
-		if($fromPersist){
-			$val = $get($persist, $k) ?? $get($core, $k);
-		}else{
+		if($fromPersist) $val = $get($persist, $k);
+		else{
 			$reqVal = $get($request, $k);
-			if($reqVal === null) $val = $get($persist, $k) ?? $get($core, $k);
+			if($reqVal === null) $val = $get($persist, $k);
 			elseif(!is_array($reqVal) || array_is_list($reqVal)) $val = $reqVal;
 			else{
 				$perVal = $get($persist, $k);

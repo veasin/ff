@@ -55,5 +55,5 @@ test('配置-driver特定配置合并', function() use ($cfg){
 	return queue('merge', fn($m) => $m === 'merged');
 }, true);
 
-test();
+test() |> (fn($a)=>json_encode($a, JSON_UNESCAPED_UNICODE |JSON_UNESCAPED_SLASHES)) |> printf(...);
 

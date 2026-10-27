@@ -29,4 +29,4 @@ test('header - 多值头数组', header()['accept'], ['text/html', 'application/
 container(null);
 test('header - 无HTTP_前缀时返回空', header(), []);
 
-test();
+test() |> (fn($a)=>json_encode($a, JSON_UNESCAPED_UNICODE |JSON_UNESCAPED_SLASHES)) |> printf(...);

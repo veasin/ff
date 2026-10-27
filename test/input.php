@@ -278,4 +278,4 @@ test('<100 简写', input(['code' => ['int', '<100', 'body']]), ['code' => 0]);
 test('=0 简写', input(['code' => ['int', '=0', 'body']]), ['code' => 0]);
 test('!=0 简写', input(['id' => ['int', '!=0', 'body']]), ['id' => 456]);
 
-test();
+test() |> (fn($a)=>json_encode($a, JSON_UNESCAPED_UNICODE |JSON_UNESCAPED_SLASHES)) |> printf(...);

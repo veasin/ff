@@ -205,4 +205,4 @@ test('param subquery JOIN with WHERE', sql(['SELECT', 'from' => ['u' => 'user'],
 	['table' => ['a' => ['SELECT', 'from' => 'log', 'where' => ['type' => 1]]], 'on' => ['user_id' => 'u.id']],
 ], 'where' => ['u.name' => 'vea']], ['param' => true]), ['SELECT * FROM `user` `u` LEFT JOIN (SELECT * FROM `log` WHERE `type` = ?) `a` ON (`user_id` = `u`.`id`) WHERE `u`.`name` = ?', [1, 'vea']]);
 
-test();
+test() |> (fn($a)=>json_encode($a, JSON_UNESCAPED_UNICODE |JSON_UNESCAPED_SLASHES)) |> printf(...);

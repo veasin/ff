@@ -32,5 +32,5 @@ test('prefix int + 上下文替换', fn() => name('retry', ['id' => 999], prefix
 test('prefix bool 自动转string', fn() => name('enabled', prefix: '#key.'), '1');
 test('直接路径 int', fn() => name('#key.retry'), '3');
 test('直接路径 bool', fn() => name('#key.enabled'), '1');
-test();
+test() |> (fn($a)=>json_encode($a, JSON_UNESCAPED_UNICODE |JSON_UNESCAPED_SLASHES)) |> printf(...);
 

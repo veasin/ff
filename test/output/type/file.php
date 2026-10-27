@@ -29,4 +29,4 @@ test('file 无 path code', $result[1]['code'], 404);
 
 unlink($testFile);
 
-test();
+test() |> (fn($a)=>json_encode($a, JSON_UNESCAPED_UNICODE |JSON_UNESCAPED_SLASHES)) |> printf(...);

@@ -25,4 +25,4 @@ test('路径不存在指定层返回null', fn() => key('#kt.nonexist', 'x'), nul
 test('int 原样返回', fn() => key('#kt.count'), 42);
 test('bool 原样返回', fn() => key('#kt.active'), true);
 
-test();
+test() |> (fn($a)=>json_encode($a, JSON_UNESCAPED_UNICODE |JSON_UNESCAPED_SLASHES)) |> printf(...);

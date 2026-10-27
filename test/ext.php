@@ -43,6 +43,6 @@ container('^#ext.testE.h2', fn($x) => "h2:$x");
 test('non-callable skipped', ext('testE', null, 'a'), 'h2:a');
 test('string mode non-callable', ext('testE', 'h1', 'a'), null);
 
-test();
+test() |> (fn($a)=>json_encode($a, JSON_UNESCAPED_UNICODE |JSON_UNESCAPED_SLASHES)) |> printf(...);
 
 container(null, true);

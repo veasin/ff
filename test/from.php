@@ -40,17 +40,15 @@ container('#in.body', null);
 test('from body - application/json', from('name'), 'test');
 test('from body - application/json id', from('id'), 456);
 
-container('#in.content', [
-    'text/xml' => fn($raw) => ['parsed' => 'xml', 'raw' => $raw],
-    'default' => fn($raw) => ['parsed' => 'custom', 'raw' => $raw],
-]);
+container('^#ext.body.text/xml', fn($raw) => ['parsed' => 'xml', 'raw' => $raw]);
 container('#in.headers', ['content-type' => 'text/xml']);
 container('#in.raw', '<root/>');
 container('#in.body', null);
 test('from body - custom content-type', from('parsed'), 'xml');
 
+container('^#ext.body.text/plain', fn($raw) => ['parsed' => 'custom', 'raw' => $raw]);
 container('#in.headers', ['content-type' => 'text/plain']);
 container('#in.raw', 'custom-default');
 container('#in.body', null);
 test('from body - custom default', from(null), ['parsed' => 'custom', 'raw' => 'custom-default', 'RAW' => 'custom-default']);
-test();
+test() |> (fn($a)=>json_encode($a, JSON_UNESCAPED_UNICODE |JSON_UNESCAPED_SLASHES)) |> printf(...);

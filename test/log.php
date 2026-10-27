@@ -51,6 +51,6 @@ log(new StringableClass());
 test('Stringable支持', (string)$logs[0]['message'], 'from Stringable');
 log('multiple log handlers', 'info');
 test('多个handler广播', count($logs), 2);
-test();
+test() |> (fn($a)=>json_encode($a, JSON_UNESCAPED_UNICODE |JSON_UNESCAPED_SLASHES)) |> printf(...);
 
 container(null, true);

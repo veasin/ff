@@ -85,5 +85,5 @@ test('db数组-limit offset', function(){
 	return is_array($users) && count($users) === 2;
 }, true);
 
-test();
+test() |> (fn($a)=>json_encode($a, JSON_UNESCAPED_UNICODE |JSON_UNESCAPED_SLASHES)) |> printf(...);
 

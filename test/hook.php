@@ -64,4 +64,4 @@ hook('persist_test');
 test('持久级 ^#hook.[] 不受 container(null) 影响', container('^#hook.[]'), ['after', 'end']);
 test('请求级钩子在 container(null) 后被清空', container('#hook.persist_test'), null);
 
-test();
+test() |> (fn($a)=>json_encode($a, JSON_UNESCAPED_UNICODE |JSON_UNESCAPED_SLASHES)) |> printf(...);

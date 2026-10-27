@@ -6,6 +6,16 @@ use function ff\{container, http, test};
 container(null);
 container(null, true);
 
+// 清空持久级后重新注册 ext body handlers（bootstrap 注册被清空）
+container('^#ext.body', [
+    'multipart/form-data' => fn(string $raw, ?string $mode = null) => $_POST,
+    'application/x-www-form-urlencoded' => function(string $raw, ?string $mode = null): array{
+        parse_str($raw, $params);
+        return $params;
+    },
+    'application/json' => fn(string $raw, ?string $mode = null) => json_decode($raw, true),
+]);
+
 // ── Mock driver（模拟 server 行为，无网络开销）──
 $port = 9899;
 $base = "http://127.0.0.1:$port";
@@ -370,6 +380,6 @@ test('Iterator body 自动 JSON', function() use($base){
 		&& ($r['body']['body'] ?? '') === '{"a":1,"b":2}';
 });
 
-test();
+test() |> (fn($a)=>json_encode($a, JSON_UNESCAPED_UNICODE |JSON_UNESCAPED_SLASHES)) |> printf(...);
 
 container(null, true);

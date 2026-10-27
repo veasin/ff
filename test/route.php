@@ -43,14 +43,14 @@ test('路由 - params容器写入', function(){
 	route('get:/users/{id}', function($next){});
 	return from('id', 'params');
 }, '456');
-test('路由 - CLI模式匹配', function(){
+test('路由 - CLI模式匹配（未安装ff-cli时静默降级）', function(){
 	container("#in.input", [
 		'method' => 'cli',
 		'uri' => 'app.php user list --limit=10',
 	]);
 	container("#in.params", ['user', 'list', 'limit' => '10']);
 	return route('cli: user', fn($next) => true);
-}, ['cli: user']);
+}, null);
 test('路由 - 路由映射数组', function(){
 	container(null);
 	container("#in.input", ['method' => 'get', 'uri' => '/api/list']);
@@ -472,4 +472,4 @@ test('路由 - 缺省key通配符：不干扰子路由组', function(){
 	]);
 	return ['keys' => $keys, 'result' => container('#route.result')];
 }, ['keys' => ['*', 'get:api/users'], 'result' => 'wrap(users:admin)']);
-test();
+test() |> (fn($a)=>json_encode($a, JSON_UNESCAPED_UNICODE |JSON_UNESCAPED_SLASHES)) |> printf(...);

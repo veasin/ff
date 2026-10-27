@@ -26,4 +26,4 @@ test('json 编码失败 message', is_string($result[1]['message'] ?? null), true
 $result = ext('out.type', 'json', 123, ['code' => 200, 'headers' => ['X-Custom' => 'val']]);
 test('json 保留已有 headers', ($result[1]['headers'] ?? [])['X-Custom'] ?? null, 'val');
 
-test();
+test() |> (fn($a)=>json_encode($a, JSON_UNESCAPED_UNICODE |JSON_UNESCAPED_SLASHES)) |> printf(...);

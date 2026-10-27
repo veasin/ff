@@ -52,7 +52,7 @@ foreach($levels as $level){
 	file_put_contents($tmpLog, '');
 }
 
-test();
+test() |> (fn($a)=>json_encode($a, JSON_UNESCAPED_UNICODE |JSON_UNESCAPED_SLASHES)) |> printf(...);
 
 unlink($tmpLog);
 ini_set('error_log', '');

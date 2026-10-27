@@ -40,6 +40,7 @@ ff 生态下的扩展项目：
 
 | 项目 | 说明 |
 |------|------|
+| [ff-cli](https://github.com/veasin/ff-cli) | CLI 能力层：参数解析、输出、路由 |
 | [ff-franken](https://github.com/veasin/ff-franken) | FrankenPHP worker 模式适配器 |
 | [ff-llm](https://github.com/veasin/ff-llm) | LLM 统一聊天接口，多 provider 切换、Tool Calling |
 | [ff-log-ws](https://github.com/veasin/ff-log-ws) | WebSocket 日志实时传输 |

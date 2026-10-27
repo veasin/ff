@@ -120,4 +120,4 @@ test('rest - 未知 key 被忽略', function(){
 
 register_shutdown_function(fn() => container('#out.op', ['data' => null, 'meta' => ['code' => 200]]));
 
-test();
+test() |> (fn($a)=>json_encode($a, JSON_UNESCAPED_UNICODE |JSON_UNESCAPED_SLASHES)) |> printf(...);

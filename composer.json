@@ -10,7 +10,7 @@
     }
   ],
   "require":{
-    "php":"^8.4",
+    "php":">=8.5",
     "ext-pdo":"*",
     "ext-json":"*",
 	"ext-fileinfo":"*"
@@ -19,6 +19,7 @@
     "veasin/ff-sql":">=0.1.0"
   },
   "suggest":{
+    "veasin/ff-cli": "CLI capability layer — input/output/routing via ext system",
     "veasin/ff-franken":"FrankenPHP worker mode adapter",
     "veasin/ff-llm":"Unified LLM chat interface with multi-provider switching and tool calling",
     "veasin/ff-log-ws":"WebSocket real-time log transport",
@@ -40,23 +41,23 @@
       "src/filter.php",
       "src/filter/rules.php",
       "src/filter/check.php",
-      "src/args.php",
       "src/from.php",
       "src/from/header.php",
       "src/from/body.php",
       "src/input.php",
-      "src/output/cli.php",
       "src/output/http.php",
       "src/output/type/json.php",
 	  "src/output/type/file.php",
       "src/output/type/view.php",
       "src/output.php",
       "src/i18n.php",
+      "src/enable.php",
       "src/key.php",
       "src/name.php",
       "src/hump.php",
       "src/middleware.php",
       "src/route.php",
+      "src/route/http.php",
       "src/db.php",
       "src/cache.php",
       "src/cache/apcu.php",

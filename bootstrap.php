@@ -7,6 +7,20 @@ container([
 		'from' => [
 			'body' => \ff\from\body(...),
 			'header' => \ff\from\header(...),
+			'input' => fn() => [
+				'method' => strtolower($_SERVER['REQUEST_METHOD'] ?? 'get'),
+				'protocol' => $_SERVER['SERVER_PROTOCOL'] ?? 'HTTP/1.1',
+				'uri' => $_SERVER['REQUEST_URI'] ?? '/',
+			],
+			'params' => fn() => [],
+		],
+		'body' => [
+			'multipart/form-data' => fn(string $raw, ?string $mode = null) => $_POST,
+			'application/x-www-form-urlencoded' => function(string $raw, ?string $mode = null): array{
+				parse_str($raw, $params);
+				return $params;
+			},
+			'application/json' => fn(string $raw, ?string $mode = null) => json_decode($raw, true),
 		],
 		'http' => [
 			'curl' => \ff\http\curl(...),
@@ -21,10 +35,20 @@ container([
 				'view' => \ff\output\type\view(...),
 				'file' => \ff\output\type\file(...),
 			],
-			'emit' => [
+			'emit'=>[
 				'http' => \ff\output\http(...),
-				'cli' => \ff\output\cli(...),
 			],
+		],
+		'route' => [
+			'http' => [
+				'match' => \ff\route\http(...),
+				'normalize' => fn(string $parent, string $child) => rtrim($parent, '/') . ($child ? "/$child" : ''),
+			],
+		],
+	],
+	'^#route' => [
+		'methods' => [
+			'http' => ['get', 'post', 'put', 'patch', 'delete', 'head', 'options', '*'],
 		],
 	],
 	'^#input' => [
@@ -95,8 +119,13 @@ container([
 			'cube' => false,
 		],
 	],
-	'^#out' => ['type' => 'json', 'emit' => container('#mode:cli') ? 'cli' : 'http'],
-	'^#hook.[]' => ['after', 'end'],
+	'^#out' => ['type' => 'json', 'emit' => 'http'],
+	'^i18n' => [
+		'lang' => 'zh_CN',
+	],
+	'^#hook' => [
+		'[]' => ['after', 'end'],
+	],
 ]);
 hook('after', output(...));
 register_shutdown_function(hook(...));

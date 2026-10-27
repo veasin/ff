@@ -61,4 +61,4 @@ test('sql对象-select指定字段', function(){
 	);
 	return array_keys($user) === ['id', 'name'];
 }, true);
-test();
+test() |> (fn($a)=>json_encode($a, JSON_UNESCAPED_UNICODE |JSON_UNESCAPED_SLASHES)) |> printf(...);

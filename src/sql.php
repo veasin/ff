@@ -128,7 +128,7 @@ function sql(array $query, string|array $options = []): string|array|null{
 			$args = array_slice($e, 1);
 			static $ops = ['gt' => '>', 'eq' => '=', 'ne' => '!=', 'lt' => '<', 'le' => '<=', 'ge' => '>=', 'like' => 'LIKE', 'add' => '+', 'sub' => '-', 'mul' => '*', 'div' => '/', 'mod' => '%'];
 			$opLower = strtolower($op);
-			if(isset($ops[$opLower])) return $val($args[0]) . ' ' . $ops[$opLower] . ' ' . $val($args[1], true);
+			if(isset($ops[$opLower])) return $val($args[0]) . ' ' . $ops[$opLower] . ' ' . $val($args[1]);
 			return match(true){
 				$op === 'RAW' => (string)($e[1] ?? ''),
 				$op === 's' => $val($e[1], true),

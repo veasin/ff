@@ -63,4 +63,4 @@ test('$value 作为兜底默认值',
 	'fallback_val'
 );
 
-test();
+test() |> (fn($a)=>json_encode($a, JSON_UNESCAPED_UNICODE |JSON_UNESCAPED_SLASHES)) |> printf(...);
