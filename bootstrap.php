@@ -127,5 +127,5 @@ container([
 		'[]' => ['after', 'end'],
 	],
 ]);
-hook('after', output(...));
+hook('after', output(...), 1000);
 register_shutdown_function(hook(...));
