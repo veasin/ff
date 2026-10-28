@@ -34,6 +34,7 @@ container([
 				'json' => \ff\output\type\json(...),
 				'view' => \ff\output\type\view(...),
 				'file' => \ff\output\type\file(...),
+				'raw'=>fn($data, $meta)=>[$data, $meta],
 			],
 			'emit'=>[
 				'http' => \ff\output\http(...),
