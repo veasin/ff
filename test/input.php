@@ -282,4 +282,26 @@ test('<100 简写', input(['code' => ['int', '<100', 'body']]), ['code' => 0]);
 test('=0 简写', input(['code' => ['int', '=0', 'body']]), ['code' => 0]);
 test('!=0 简写', input(['id' => ['int', '!=0', 'body']]), ['id' => 456]);
 
+// ============================================================
+// 29. string list 简写（第一参数为字符串，纯字面分割）
+// ============================================================
+test('string list 单字段', input('name', 'str,body'), ['name' => 'John']);
+test('string list 多字段', input('name,email', 'str,body'), ['name' => 'John', 'email' => 'john@example.com']);
+test('string list 与 array list 等价', input('name,email', 'str,body'), input(['name', 'email'], 'str,body'));
+test('string list 与 map 等价', input('name,email', 'str,body'), input(['name' => ['str', 'body'], 'email' => ['str', 'body']], []));
+test('string list 返回 assoc 而非标量', input('id', 'int,body'), ['id' => 456]);
+
+// 不 trim：空格成为字段名的一部分
+test('逗号后空格成为 key 前导空白', input('name, email', 'str,body'), ['name' => 'John', ' email' => '']);
+test('空格字段名走空值逻辑（null:remove 时移除）', input('name, email', 'str,null:remove'), ['name' => 'John']);
+
+// 空段保留为 ''
+test('空段保留为 ""', input('name,,email', 'str,body'), ['name' => 'John', '' => '', 'email' => 'john@example.com']);
+test('空白段保留为 " "', input('name, ,email', 'str,body'), ['name' => 'John', ' ' => '', 'email' => 'john@example.com']);
+test('纯空字符串 ≡ [""]', input('', 'str,body'), ['' => '']);
+test('空段 + null:remove', input('name,,email', 'str,null:remove'), ['name' => 'John', 'email' => 'john@example.com']);
+test('空段 + null:throw', function(){
+	input('name,,email', 'str,null:throw');
+}, fn($v) => $v instanceof \RuntimeException);
+
 test() |> (fn($a)=>json_encode($a, JSON_UNESCAPED_UNICODE |JSON_UNESCAPED_SLASHES)) |> printf(...);

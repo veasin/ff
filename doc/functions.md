@@ -240,7 +240,15 @@ $input = input([                                                             // 
 $input = input(['name' => ['str']], ['from' => 'body', 'null' => 0]);      // 默认规则
 $input = input(['age' => ['int', '>=:18']]);                                // check 规则
 $input = input(['title', 'img', 'date'], 'str,body');                       // list 简写：批量声明同规则字段
-$input = input(['title', 'img', 'date'], ['str', 'body']);                  // list 简写：defaults 为数组
+$input = input('title,img', 'str,body');                                     // string list 简写：逗号分隔字段名
+```
+
+**$rules 批量简写：**
+
+`$rules` 支持 string 简写，逗号分隔字段名，不 trim：
+```php
+input('name,email', 'str,body');  // → ['name' => ['str','body'], 'email' => ['str','body']]
+input('name, email', 'str,body'); // → ['name' => ..., ' email' => ...]（空格成为字段名一部分）
 ```
 
 **规则格式：**
@@ -265,7 +273,7 @@ $input = input(['title', 'img', 'date'], ['str', 'body']);                  // l
 
 **$defaults 默认规则集：**
 
-所有字段共享的默认规则，被每个字段的规则继承并覆盖。格式与 $set 相同，但只含配置键（`from`/`key`/`null`/`empty`/`default`/`error`/`type` + check），不含字段值。
+所有字段共享的默认规则，被每个字段的规则继承并覆盖。支持 `array` 或逗号分隔 `string`，格式与 $set 相同，但只含配置键（`from`/`key`/`null`/`empty`/`default`/`error`/`type` + check），不含字段值。
 
 **from 来源：**
 

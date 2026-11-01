@@ -13,12 +13,14 @@ use function ff\filter\rules;
  * input(['id' => ['int', 'query']], ['from' => 'body', 'null' => 0]);
  * input(['x' => ['str', 'key' => 'name']]);   // key 规则：lookup key ≠ 字段名
  * input(['title', 'img'], 'str,body');        // list 简写：批量声明同规则字段
+ * input('title,img', 'str,body');             // string list 简写：按 , 分割
  * ```
- * @param array $rules    字段规则映射，key 为字段名，value 为规则数组/字符串/闭包；list 数组批量声明同规则字段
+ * @param array|string $rules    字段规则映射，key 为字段名，value 为规则数组/字符串/闭包；list 数组或逗号分隔字符串批量声明同规则字段
  * @param array|string $defaults 默认规则集，所有字段继承并可被覆盖（仅 from/key/null/empty/default/error/type + check）
  * @return array 关联数组，key 为字段名，value 为处理后的值；null 处理为 remove 的字段不在结果中
  */
-function input(array $rules, array|string $defaults = []): array{
+function input(array|string $rules, array|string $defaults = []): array{
+	if(is_string($rules)) $rules = explode(',', $rules);
 	if(is_string($defaults)) $defaults = [$defaults];
 	if (array_is_list($rules)) $rules = array_fill_keys($rules, []);
 	$result = [];
