@@ -92,6 +92,10 @@ test('多字段', input([
 	'age'   => ['int', 'query'],
 	'email' => ['str', 'body'],
 ], []), ['name' => 'test', 'age' => 25, 'email' => 'john@example.com']);
+test('list 模式 + array defaults', input(['name', 'email'], ['str', 'body']), ['name' => 'John', 'email' => 'john@example.com']);
+test('list 模式 + string defaults', input(['name', 'email'], 'str,body'), ['name' => 'John', 'email' => 'john@example.com']);
+test('list 模式 + defaults 继承', input(['name', 'age'], ['from' => 'query']), ['name' => 'test', 'age' => '25']);
+test('list 模式空数组', input([], 'str,body'), []);
 
 // ============================================================
 // 10. 检查规则（单参数）

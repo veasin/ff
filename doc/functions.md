@@ -239,6 +239,8 @@ $input = input([                                                             // 
 ]);
 $input = input(['name' => ['str']], ['from' => 'body', 'null' => 0]);      // 默认规则
 $input = input(['age' => ['int', '>=:18']]);                                // check 规则
+$input = input(['title', 'img', 'date'], 'str,body');                       // list 简写：批量声明同规则字段
+$input = input(['title', 'img', 'date'], ['str', 'body']);                  // list 简写：defaults 为数组
 ```
 
 **规则格式：**
