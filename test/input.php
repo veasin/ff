@@ -304,4 +304,15 @@ test('空段 + null:throw', function(){
 	input('name,,email', 'str,null:throw');
 }, fn($v) => $v instanceof \RuntimeException);
 
+// ============================================================
+// 30. container 来源（abbr：container / []）
+// ============================================================
+container(['id' => '456', 'name' => 'container_val']);
+test('container abbr 读取 container', input(['id', 'name'], '@'), ['id' => '456', 'name' => 'container_val']);
+test('container abbr 字段不存在返回 null', input(['id', 'missing'], '@'), ['id' => '456', 'missing' => null]);
+test('container abbr 整数字段自动类型转换', input(['id'], '@,int'), ['id' => 456]);
+
+container('x','manual_val');
+test('container abbr 与 from:body 混用', input(['id' => '@', 'name' => 'body'], '@'), ['id' => '456', 'name' => 'John']);
+
 test() |> (fn($a)=>json_encode($a, JSON_UNESCAPED_UNICODE |JSON_UNESCAPED_SLASHES)) |> printf(...);

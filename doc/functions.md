@@ -241,6 +241,7 @@ $input = input(['name' => ['str']], ['from' => 'body', 'null' => 0]);      // �
 $input = input(['age' => ['int', '>=:18']]);                                // check 规则
 $input = input(['title', 'img', 'date'], 'str,body');                       // list 简写：批量声明同规则字段
 $input = input('title,img', 'str,body');                                     // string list 简写：逗号分隔字段名
+$input = input('id', 'container');                                          // 从容器中读取 id 不支持展开为['from'=>'container']
 ```
 
 **$rules 批量简写：**
@@ -280,6 +281,7 @@ input('name, email', 'str,body'); // → ['name' => ..., ' email' => ...]（空�
 - **string**：`'body'`/`'query'`/`'header'`/`'cookie'`/`'file'`/`'params'`/`'input'`
 - **callable**：`fn($key) => mixed`，接收 lookup key 返回值
 - **ArrayAccess**：`$arrayAccess[$key]`，直接用 `[]` 访问
+- **@**：abbr 简写，`from` 值为 `container(...)` 闭包，直接调用 `container($key)` 读取
 
 **key 规则：**
 

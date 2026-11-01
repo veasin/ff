@@ -94,6 +94,7 @@ container([
 			'cookie' => ['from' => 'cookie'],
 			'file' => ['from' => 'file'],
 			'params' => ['from' => 'params'],
+			'@' => ['from' => container(...)],
 			'remove' => ['null' => 'remove'],
 			'throw' => ['null' => 'throw'],
 			'email' => ['filter' => [FILTER_VALIDATE_EMAIL]],
