@@ -1086,13 +1086,13 @@ $affected = db(sql::table('users')->where(['id' => 1])->delete(), 'count');//删
 
 ## sql - SQL 构建
 
-数组描述编译为 SQL 字符串，支持 MySQL/SQLite 方言。表达式中字符串默认作为字段引用（`` `name` ``），条件 kv 中字符串值作为字面量（`'text'`），ON kv 中作为字段引用。
+数组描述编译为 SQL 字符串，支持 MySQL/SQLite 方言。带引号标记的字符串（`"'text'"`）为字符串字面量，反引号标记（`` '`raw`' ``）为 RAW 透传，裸字符串一律作为标识符交数据库验证；多源查询（join 或 from 多表）按表上下文自动补全字段限定名，单源自动退化。
 
 ```php
 sql(['SELECT', 'fields' => ['id', 'name'], 'from' => 'user']);
 sql(['SELECT', 'from' => 'user', 'where' => ['id' => 1]]);
-sql(['INSERT', 'table' => 'user', 'value' => ['name' => 'vea', 'age' => 30]]);
-sql(['UPDATE', 'from' => 'user', 'set' => ['name' => 'newname'], 'where' => ['id' => 1]]);
+sql(['INSERT', 'table' => 'user', 'value' => ['name' => "'vea'", 'age' => 30]]);
+sql(['UPDATE', 'from' => 'user', 'set' => ['name' => "'newname'"], 'where' => ['id' => 1]]);
 sql(['DELETE', 'from' => 'user', 'where' => ['status' => 0]]);
 // 方言与占位模式
 sql(['SELECT', 'from' => 'user', 'limit' => [10, 20]], 'sqlite');

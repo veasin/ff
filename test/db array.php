@@ -18,7 +18,7 @@ test('db数组-SELECT row', function(){
 	container("#db.{$cn}", ['dsn' => 'sqlite::memory:']);
 	db('CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT)', 'ok', $cn);
 	db("INSERT INTO users (name) VALUES ('Alice')", 'ok', $cn);
-	$user = db(['SELECT', 'fields' => ['id', 'name'], 'from' => 'users', 'where' => ['name' => 'Alice']], 'row', $cn);
+	$user = db(['SELECT', 'fields' => ['id', 'name'], 'from' => 'users', 'where' => ['name' => "'Alice'"]], 'row', $cn);
 	return is_array($user) && $user['name'] === 'Alice';
 }, true);
 
@@ -36,7 +36,7 @@ test('db数组-INSERT id', function(){
 	$cn = 'test_' . uniqid();
 	container("#db.{$cn}", ['dsn' => 'sqlite::memory:']);
 	db('CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT)', 'ok', $cn);
-	$id = db(['INSERT', 'table' => 'users', 'value' => ['name' => 'NewUser']], 'id', $cn);
+	$id = db(['INSERT', 'table' => 'users', 'value' => ['name' => "'NewUser'"]], 'id', $cn);
 	return is_numeric($id) && $id > 0;
 }, true);
 
@@ -45,7 +45,7 @@ test('db数组-UPDATE count', function(){
 	container("#db.{$cn}", ['dsn' => 'sqlite::memory:']);
 	db('CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT)', 'ok', $cn);
 	$id = db("INSERT INTO users (name) VALUES ('OldName')", 'id', $cn);
-	$affected = db(['UPDATE', 'from' => 'users', 'set' => ['name' => 'NewName'], 'where' => ['id' => $id]], 'count', $cn);
+	$affected = db(['UPDATE', 'from' => 'users', 'set' => ['name' => "'NewName'"], 'where' => ['id' => (int)$id]], 'count', $cn);
 	return $affected === 1;
 }, true);
 
@@ -54,7 +54,7 @@ test('db数组-DELETE count', function(){
 	container("#db.{$cn}", ['dsn' => 'sqlite::memory:']);
 	db('CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT)', 'ok', $cn);
 	$id = db("INSERT INTO users (name) VALUES ('ToDelete')", 'id', $cn);
-	$affected = db(['DELETE', 'from' => 'users', 'where' => ['id' => $id]], 'count', $cn);
+	$affected = db(['DELETE', 'from' => 'users', 'where' => ['id' => (int)$id]], 'count', $cn);
 	return $affected === 1;
 }, true);
 

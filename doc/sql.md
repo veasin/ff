@@ -10,6 +10,17 @@ sql(array $query, string|array $options = []): string|array|null
 - **string**：直接作为方言名，如 `'sqlite'`
 - **array**：支持 `'dialect'`（`'mysql'` | `'sqlite'`，默认 `'mysql'`）、`'param'`（`true` 启用 `?` 占位模式，返回 `[$sql, $params]`）
 
+**方言配置：** 各方言行为差异项通过容器 `#sql.{方言名}` 注册覆盖（`bootstrap.php` 的 `^#sql` 段），未注册项取默认：
+
+| 配置项 | 默认 | 说明 |
+|--------|------|------|
+| `'limitArray'` | `'comma'` | 数组 limit 输出：`'comma'` → `LIMIT 偏移, 数量`（MySQL）；`'standard'` → `LIMIT 数量 OFFSET 偏移` |
+| `'replace'` | `'REPLACE'` | `replace => true` 的写入语法 |
+| `'onConflict'` | `'ON DUPLICATE KEY UPDATE'` | `update` 的冲突更新子句 |
+| `'boolLiteral'` | `true` | bool 输出 `TRUE`/`FALSE`（`false` 时输出 `1`/`0`） |
+
+配置只翻译「同一语义的方言写法差异」（如 `REPLACE` 与 `INSERT OR REPLACE`）。目标库不支持的特性（如 SQLite 无行锁、无 `STRAIGHT_JOIN`）不在配置范围——编译器原样输出，执行报错由使用方处理。
+
 ---
 
 ## 一、规则
@@ -21,30 +32,121 @@ sql(array $query, string|array $options = []): string|array|null
 | 参数类型 | 解释 |
 |----------|------|
 | 数字 / bool / null | 字面量，直接输出 |
-| 合法标识符字符串 | 字段名，输出 `` `name` `` |
-| 非法标识符字符串 | 字面量，输出 `'text'` |
-| `['s', 'text']` | 字面量字符串标记，输出 `'text'` |
+| 裸字符串 | 字段/表名（标识符），输出 `` `name` `` |
+| 引号标记字符串 | 字符串字面量，输出 `'text'` |
+| 反引号标记字符串 | RAW 透传，原样输出 |
 | `'*'` / `'table.*'` | 通配符，输出 `*` / `` `table`.* `` |
 | `[op, ...]` | 子表达式 / 子查询，递归 |
 
-合法标识符规则：`/^[a-zA-Z_$][a-zA-Z0-9_$]*(?:\.[a-zA-Z_$][a-zA-Z0-9_$]*){0,2}$/`
+**核心原则：SQL 同构，位置无关**
 
-**字符串值的上下文行为：**
+带引号的是字符串值，裸写的是标识符（字段/表名）——与 SQL 源码一致，与所处位置（条件值、SET、INSERT 值、表达式参数）无关。标识符是否有效不由编译器判定，交由 db 验证（如 Unknown column / 表不存在）：
 
-| 上下文 | `string` 含义 |
-|--------|--------------|
-| 表达式数组 `[op, arg, ...]` | 字段引用（`` `name` ``） |
-| 条件 kv / SET / INSERT value | 字面量（`'name'`） |
-| ON kv | 字段引用（连接表的字段 = 主表字段） |
+**编译器职责：** sql() 是数组结构到 SQL 文本的翻译器，只按规则转换。缺省值有默认处理（join type 缺省 LEFT、fields 缺省 `*`）；用户明确写入的内容只要符合规范格式一律原样翻译——不降级、不丢弃、不静默替换。写错名字、用了目标库不支持的特性，由 db 执行时报错定位。
 
-| 字符串 | 输出 |
+| 字符串 | 判定 | 输出 |
+|--------|------|------|
+| `'name'` | 字段 | `` `name` `` |
+| `'user.id'` | 字段（`.` 前为表别名） | `` `user`.`id` `` |
+| `"'vea'"` | 字符串值 `vea` | `'vea'` |
+| `"'%php%'"` | 字符串值 `%php%` | `'%php%'` |
+| `` '`col + 1`' `` | RAW `col + 1` | `col + 1` |
+| `'*'` | 通配符 | `*` |
+| `'%php%'` | 字段 `%php%`（若 db 报 Unknown column，说明本意是字符串值，应写 `"'%php%'"`） | `` `%php%` `` |
+
+**标记判定与剥离：**
+
+- 长度 ≥ 2，且首位与末位为同种 `'` 或 `"` → 字符串字面量（两种引号等价）
+- 长度 ≥ 2，且首位与末位为 `` ` `` → RAW
+- 剥离只去第一位与最后一位各一个字符，中间全部为内容：
+
+| PHP 值 | 判定 | 剥离后内容 | 输出 |
+|--------|------|-----------|------|
+| `"'123'"` | 字面量 | `123` | `'123'` |
+| `"''123''"` | 字面量 | `'123'` | `'''123'''`（内容整体转义） |
+| `"'it's'"` | 字面量 | `it's` | `'it''s'` |
+| `` '`NOW()`' `` | RAW | `NOW()` | `NOW()` |
+
+- 字面量内容中的 `'` 转义为 `''`；标识符内部的反引号双写（`'a`b'` → `` `a``b` ``）
+- 标识符含 `.` 按点分段包裹（`'a.b'` → `` `a`.`b` ``），需要含点的整体名请用 RAW
+- 标识符位（AS 别名、列名、表名等）收到引号标记字符串时按字面量原样输出，不参数化、不做标识符包裹
+
+**书写 helper（项目级惯例）：**
+
+```php
+function s(string $str): string{ return "'{$str}'"; }
+```
+
+字面量标记可在项目内封装 helper 统一书写，构造遵守 `标记 + 内容 + 标记`，运行时值同样适用：
+
+```php
+['title' => s('vea')]           ≡  ['title' => "'vea'"]
+['LIKE', 'title', s($kw)]       // 运行时值，param 模式下内容入 params
+```
+
+**大小写：** 关键字识别不区分大小写（输出归一大写）；函数名保留书写原样。
+
+### 表上下文与字段限定
+
+每个字段位持有当前表：
+
+| 位置 | 当前表 |
+|------|--------|
+| 主查询 fields / where / having / order / group / set | 默认表（from 第一个源） |
+| join 项 fields / on 的 key | join 表 |
+| on 的 value | 默认表 |
+| 子查询内部 | 递归隔离——用自身 from 的第一个源 |
+
+裸标识符按当前表补限定名（别名优先，无别名用表名）；已含 `.` 的跳过（视为显式限定）。该规则递归作用于表达式内部（如 `['COUNT', 'id']`）。
+
+**多源补全 / 单源退化：**
+
+| 源数量 | 行为 |
 |--------|------|
-| `'name'` | `` `name` `` |
-| `'user.id'` | `` `user`.`id` ``（`.` 前为表别名） |
-| `'%vea%'` | `'%vea%'`（非法标识符，自动降级） |
-| `'active'` | `` `active` ``（合法标识符，需字面量时用 `['s', 'active']`） |
-| `'*'` | `*`（通配符） |
-| `'user.*'` | `` `user`.* ``（表限定通配符） |
+| 多源（存在 join 或 from 多表） | 裸字段补表限定：`'id'` → `` `u`.`id` `` |
+| 单源 | 不补全；显式前缀与该源表名/别名匹配则退化（`'u.id'` → `` `id` ``、`'u.*'` → `*`），不匹配保持原样交 db 验证；FROM 的别名一并退化 |
+
+```
+// 多源：fields、where、on 均按当前表补全
+['SELECT', 'from' => ['u' => 'user'], 'join' => [['table' => ['i' => 'info'], 'on' => ['user_id' => 'id']]]]
+// 'fields' => ['id', 'nickname']  →  SELECT `u`.`id`, `i`.`nickname` ...
+
+// 单源：不补全，显式限定与该源匹配则退化
+['SELECT', 'fields' => ['u.id', 'name'], 'from' => ['u' => 'user']]
+→  SELECT `id`, `name` FROM `user`
+
+['SELECT', 'fields' => ['u.*'], 'from' => ['u' => 'user']]
+→  SELECT * FROM `user`
+```
+
+补全是按当前表的推断：链式 join 的 ON 引用**前面** join 的表时，裸写会被错补默认表前缀，须显式限定——错误由 db 报错定位。
+
+**通配符 `*`：**
+
+| 形态 | 表归属 | 多源 | 单源 |
+|------|--------|------|------|
+| `'*'` | 无（语句级） | `*` | `*` |
+| `'t.*'` | 显式 | 保持 | 前缀匹配该源则退化 `*` |
+| `fields => []` | 编译器补 | 该源 `表.*` | 同左后退化 |
+
+`*` 不是字段、无表归属，永不参与补全与退化——`['COUNT', '*']` → `COUNT(*)` 在任何源上下文一致，非特例。
+
+### param 模式
+
+`'param' => true` 时值位置输出 `?` 占位并收集参数，返回 `[$sql, $params]`：
+
+| 内容 | param 模式行为 |
+|------|---------------|
+| 条件值 / INSERT value / UPDATE set 值 | 绑定 `?`，入 params |
+| 引号标记字面量 | 绑定 `?`，标记内容入 params |
+| bool | 绑定为 `1` / `0` |
+| null | 输出 `NULL`，不绑定 |
+| 裸标识符 / RAW | 不绑定，原样输出 |
+
+```php
+sql(['SELECT', 'from' => 'user', 'where' => ['id' => 1, 'name' => "'vea'"]], ['param' => true]);
+// ['SELECT * FROM `user` WHERE `id` = ? AND `name` = ?', [1, 'vea']]
+```
 
 ---
 
@@ -53,10 +155,10 @@ sql(array $query, string|array $options = []): string|array|null
 ### 字面量
 
 ```
-123           →  123
-true          →  TRUE
-null          →  NULL
-['s', 'text'] →  'text'
+123            →  123
+true           →  TRUE
+null           →  NULL
+"'text'"       →  'text'
 ```
 
 ### 字段
@@ -69,44 +171,57 @@ null          →  NULL
 ### 函数
 
 ```
-['COUNT', '*']             →  COUNT(*)
-['IF', cond, a, b]         →  IF(cond, a, b)
-['TRIM', a]                →  TRIM(a)
-['NOW']                    →  NOW()
-['DATE_FORMAT', a, '%Y-%m']  →  DATE_FORMAT(a, '%Y-%m-%d')
+['COUNT', '*']                  →  COUNT(*)
+['IF', cond, a, b]              →  IF(cond, a, b)
+['TRIM', a]                     →  TRIM(a)
+['NOW']                         →  NOW()
+['DATE_FORMAT', a, "'%Y-%m'"]   →  DATE_FORMAT(a, '%Y-%m')
 ```
 
 ### 操作符
 
+二元操作符直接写符号：
+
 ```
-['gt', a, 18]              →  a > 18
-['eq', a, 1]               →  a = 1
-['ne', a, 0]               →  a != 0
-['lt', a, 1]               →  a < 1
-['le', a, 1]               →  a <= 1
-['ge', a, 18]              →  a >= 18
-['LIKE', a, '%x%']         →  a LIKE '%x%'
-['IN', f, 1, 2]            →  f IN (1, 2)
-['BETWEEN', f, 1, 10]      →  f BETWEEN 1 AND 10
-['NOT IN', f, 1, 2]        →  f NOT IN (1, 2)
-['isnull', a]              →  a IS NULL
-['is not null', a]         →  a IS NOT NULL
-['add', a, 1]              →  a + 1
-['sub', a, 1]              →  a - 1
-['mul', a, 2]              →  a * 2
-['div', a, 2]              →  a / 2
-['mod', a, 2]              →  a % 2
-['and', a, b]              →  (a AND b)
-['or', a, b]               →  (a OR b)
+['=', a, 1]       →  a = 1
+['!=', a, 0]      →  a != 0
+['<>', a, 0]      →  a <> 0
+['<', a, 1]       →  a < 1
+['<=', a, 1]      →  a <= 1
+['>', a, 18]      →  a > 18
+['>=', a, 18]     →  a >= 18
+['+', a, 1]       →  a + 1
+['-', a, 1]       →  a - 1
+['*', a, 2]       →  a * 2
+['/', a, 2]       →  a / 2
+['%', a, 2]       →  a % 2
 ```
 
-操作符名规则：小写操作符（`gt`、`eq`、`like`）转 SQL 操作符；大写/其他作为 SQL 函数名。
+`!=` 与 `<>` 语义等价，按 SQL 方言原样输出。
+
+关键字操作符：
+
+```
+['LIKE', a, "'%x%'"]     →  a LIKE '%x%'
+['IN', f, 1, 2]          →  f IN (1, 2)
+['NOT IN', f, 1, 2]      →  f NOT IN (1, 2)
+['BETWEEN', f, 1, 10]    →  f BETWEEN 1 AND 10
+['EXISTS', subq]         →  EXISTS (subq)
+['NOT EXISTS', subq]     →  NOT EXISTS (subq)
+['IS NULL', a]           →  a IS NULL
+['IS NOT NULL', a]       →  a IS NOT NULL
+['AND', a, b]            →  (a AND b)
+['OR', a, b]             →  (a OR b)
+['NOT', a]               →  NOT a
+```
+
+首元素分派：符号 → 二元操作符；命中关键字表 → 对应语法；其余标识符 → 函数调用。
 
 ### 一元操作符
 
 ```
-['NOT', ['eq', 'a', 1]]  →  NOT (`a` = 1)
-['NOT', 'flag']          →  NOT `flag`
+['NOT', ['=', 'a', 1]]  →  NOT (`a` = 1)
+['NOT', 'flag']         →  NOT `flag`
 ```
 
 ### N 元逻辑
@@ -121,16 +236,16 @@ null          →  NULL
 
 ```
 ['CASE', 'status',
-    ['WHEN', 1, ['s', 'active']],
-    ['WHEN', 2, ['s', 'inactive']],
-    ['ELSE', ['s', 'unknown']],
+    ['WHEN', 1, "'active'"],
+    ['WHEN', 2, "'inactive'"],
+    ['ELSE', "'unknown'"],
 ]
 →  CASE `status` WHEN 1 THEN 'active' WHEN 2 THEN 'inactive' ELSE 'unknown' END
 
 ['CASE',
-    ['WHEN', ['gt', 'age', 18], ['s', 'adult']],
-    ['WHEN', ['gt', 'age', 12], ['s', 'teen']],
-    ['ELSE', ['s', 'child']],
+    ['WHEN', ['>', 'age', 18], "'adult'"],
+    ['WHEN', ['>', 'age', 12], "'teen'"],
+    ['ELSE', "'child'"],
 ]
 →  CASE WHEN `age` > 18 THEN 'adult' WHEN `age` > 12 THEN 'teen' ELSE 'child' END
 ```
@@ -176,15 +291,15 @@ null          →  NULL
 
 ### RAW 逃生口
 
-需要直接注入原生 SQL 时使用 `['RAW', 'sql']`：
+需要直接注入原生 SQL 时用反引号包裹：
 
 ```
-['RAW', 'NOW()']         →  NOW()
-['RAW', 'DEFAULT']       →  DEFAULT
-['RAW', 'col + 1']       →  col + 1
+'`NOW()`'      →  NOW()
+'`DEFAULT`'    →  DEFAULT
+'`col + 1`'    →  col + 1
 ```
 
-RAW 内容原样输出，不转义、不加引号。
+RAW 内容原样输出，不转义、不加引号、不参数化。
 
 ### 子查询
 
@@ -194,7 +309,7 @@ RAW 内容原样输出，不转义、不加引号。
 ['IN', 'id', ['SELECT', 'fields' => ['id'], 'from' => 'log']]
 →  `id` IN (SELECT `id` FROM `log`)
 
-['EXISTS', ['SELECT', 'fields' => [1], 'from' => 'log', 'where' => ['user_id' => 'id']]]
+['EXISTS', ['SELECT', 'fields' => [1], 'from' => 'log', 'where' => [['=', 'user_id', 'id']]]]
 →  EXISTS (SELECT 1 FROM `log` WHERE `user_id` = `id`)
 
 ['NOT EXISTS', ['SELECT', 'fields' => [1], 'from' => 'log']]
@@ -216,10 +331,12 @@ RAW 内容原样输出，不转义、不加引号。
 | `'u.name'` | `` `u`.`name` `` |
 | `['COUNT', '*']` | `COUNT(*)` |
 | `'total' => ['COUNT', '*']` | `COUNT(*)` `` `total` `` |
-| `'label' => ['IF', ['gt', 'age', 18], ['s', 'adult'], ['s', 'minor']]` | `IF(`age` > 18, 'adult', 'minor')` `` `label` `` |
+| `'label' => ['IF', ['>', 'age', 18], "'adult'", "'minor'"]` | `IF(`age` > 18, 'adult', 'minor')` `` `label` `` |
 | `['id', 'name']` | `` `id`, `name` `` |
 
 `key => value` 表示 AS 别名。
+
+上表为字段形态的解析输出；字段位处于表上下文时按限定规则补全或退化（见一、规则·表上下文与字段限定）。
 
 ---
 
@@ -240,45 +357,50 @@ RAW 内容原样输出，不转义、不加引号。
 
 | 形式 | 说明 |
 |------|------|
-| `'field' => scalar` | 字段比较（等值/IS NULL） |
+| `'field' => scalar` | 等值（null 特判 IS NULL） |
+| `'field' => "'str'"` | 字符串值等值 |
+| `'field' => 'field2'` | 字段对字段比较（裸 = 字段） |
 | `'field' => [op, ...]` | 字段操作（简写） |
+| `'field' => [1, 2, 5]` | IN |
 | `[op, ...]` | 独立表达式 |
 
 ```
-'status' => 1               等价于 ['eq', 'status', 1]
-'name' => ['LIKE', '%p%']   等价于 ['LIKE', 'name', '%p%']
+'status' => 1                    等价于 ['=', 'status', 1]
+'name' => ['LIKE', "'%p%'"]      等价于 ['LIKE', 'name', "'%p%'"]
 ```
 
-**条件 kv 简写中，`string` 值视为字面量**（与表达式数组中的行为不同——那里 string 是字段引用）：
+字符串值与字段的区分不依赖位置：
 
 ```
-'name' => 'vea'              →  `name` = 'vea'           （lit，字面量）
-'name' => ['s', 'vea']      →  `name` = 'vea'           （同上，冗余安全）
-'on'  => {user_id: 'id'}    →  `i`.`user_id` = `u`.`id`  （ON 中 string=字段引用）
+'name' => "'vea'"      →  `name` = 'vea'        （字符串值）
+'name' => 'vea'        →  `name` = `vea`         （字段比较）
+'name' => 'creator'    →  `name` = `creator`     （字段比较）
 ```
 
 ### key-value 分支
 
 ```
-'field' => scalar             →  `field` = scalar
-'field' => null               →  `field` IS NULL         （特判）
-'field' => [非字符串首, ...]  →  `field` IN (...)         （首元素非 string）
-'field' => [字符串操作符, ...] →  `field` op(...)          （首元素为已知操作符）
+'field' => 数字/bool/null     →  `field` = scalar
+'field' => null              →  `field` IS NULL        （特判）
+'field' => "'str'"           →  `field` = 'str'
+'field' => 'field2'          →  `field` = `field2`
+'field' => ['>', 18]         →  `field` > 18           （简写）
+'field' => [1, 2, 5]         →  `field` IN (1, 2, 5)   （首元素非字符串）
 ```
 
-`null` 在条件 kv 中自动转为 `IS NULL`（而非 `= NULL`）。`['NOT', null]` 转为 `IS NOT NULL`。
+`null` 在条件 kv 中自动转为 `IS NULL`（而非 `= NULL`）。
 
 ### 示例
 
 ```
 ['AND',
     'status' => 1,
-    'type'   => ['NE', 0],
-    'title'  => ['LIKE', '%php%'],
+    'type'   => ['!=', 0],
+    'title'  => ['LIKE', "'%php%'"],
     'tag_id' => [1, 2, 5],
     ['OR',
-        ['eq', 'flag', 1],
-        ['isnull', 'deleted_at'],
+        ['=', 'flag', 1],
+        ['IS NULL', 'deleted_at'],
     ],
 ]
 
@@ -291,22 +413,23 @@ RAW 内容原样输出，不转义、不加引号。
 ```
 ['AND', 'a' => 1, 'b' => 2]    →  `a` = 1 AND `b` = 2
 ['OR',  'a' => 1, 'b' => 2]    →  (`a` = 1 OR `b` = 2)
-['a' => 1, 'b' => 2]            →  `a` = 1 AND `b` = 2    (缺省 AND)
+['a' => 1, 'b' => 2]           →  `a` = 1 AND `b` = 2    (缺省 AND)
 ```
 
 ---
 
 ## 五、from
 
-from 描述数据来源，支持以下形式：
+from 描述数据来源，表名裸写（同 SQL），支持以下形式：
 
 | 形式 | 说明 | 示例输出 |
 |------|------|---------|
 | `'user'` | 单表无别名 | `` FROM `user` `` |
+| `'user u'` | 单表带别名 | `` FROM `user` `u` `` |
 | `['user', 'role']` | 多表无别名 | `` FROM `user`, `role` `` |
-| `{u: 'user'}` | 单/多表有别名 | `` FROM `user` `u` `` |
-| `{u: 'user', r: 'role'}` | 多表有别名 | `` FROM `user` `u`, `role` `r` `` |
-| `{a: ['SELECT', ...]}` | 子查询 | `` FROM (SELECT ...) `a` `` |
+| `['u' => 'user']` | 单/多表有别名 | `` FROM `user` `u` `` |
+| `['u' => 'user', 'r' => 'role']` | 多表有别名 | `` FROM `user` `u`, `role` `r` `` |
+| `['a' => ['SELECT', ...]]` | 子查询 | `` FROM (SELECT ...) `a` `` |
 
 迭代逻辑（PHP 伪代码）：
 
@@ -320,6 +443,10 @@ for (from as alias => name)
         → 表 name，无别名
 ```
 
+key 为别名、value 为表实体（表名或子查询）——与字段 AS 别名（`'total' => ['COUNT', '*']`）方向一致。
+
+多表 from 的裸字段按默认表（第一个源，无别名用表名）补全；需要其他表的字段显式限定。
+
 ---
 
 ## 六、查询
@@ -331,41 +458,79 @@ for (from as alias => name)
 ```
 ['SELECT',
     'fields' => ['id', 'name', 'total' => ['COUNT', '*']],
-    'from'   => {u: 'user'},
+    'from'   => ['u' => 'user'],
     'join'   => [
-        {table: {i: 'info'}, on: {user_id: 'id'}},
-        {table: {p: 'profile'}, on: {user_id: 'id'}, type: 'INNER'},
+        ['table' => ['i' => 'info'], 'on' => ['user_id' => 'id']],
+        ['table' => ['p' => 'profile'], 'on' => ['user_id' => 'id'], 'type' => 'INNER'],
     ],
-    'where'  => ['AND', 'status' => 1, ['OR', ['eq', 'flag', 1], ['isnull', 'deleted_at']]],
+    'where'  => ['AND', 'status' => 1, ['OR', ['=', 'flag', 1], ['IS NULL', 'deleted_at']]],
     'group'  => ['type'],
-    'having' => ['AND', ['gt', ['COUNT', '*'], 5]],
+    'having' => ['AND', ['>', ['COUNT', '*'], 5]],
     'order'  => ['created_at' => 'DESC'],
     'limit'  => 20,
     'offset' => 0,
     'distinct' => true,
 ]
 
-→  SELECT DISTINCT `id`, `name`, COUNT(*) `total`
+→  SELECT DISTINCT `u`.`id`, `u`.`name`, COUNT(*) `total`
    FROM `user` `u`
    LEFT JOIN `info` `i` ON (`i`.`user_id` = `u`.`id`)
    INNER JOIN `profile` `p` ON (`p`.`user_id` = `u`.`id`)
-   WHERE `status` = 1 AND (`flag` = 1 OR `deleted_at` IS NULL)
-   GROUP BY `type`
+   WHERE `u`.`status` = 1 AND (`u`.`flag` = 1 OR `u`.`deleted_at` IS NULL)
+   GROUP BY `u`.`type`
    HAVING COUNT(*) > 5
-   ORDER BY `created_at` DESC
+   ORDER BY `u`.`created_at` DESC
    LIMIT 20 OFFSET 0
 ```
+
+### select 空间
+
+fields 描述各数据源的字段贡献，主表与各 join 表依次并入同一空间（源顺序 = from 顺序 + join 声明顺序）：
+
+| 源的 fields | 贡献 |
+|------|------|
+| 缺省（不写键） | 无贡献 |
+| `[]` | 该源 `表.*` |
+| `['id', ...]` | 按该源上下文补全限定后的字段（join 源用 join 表） |
+
+空间为空（主表与全部 join 均缺省）→ 编译器输出 `*`。
+
+```
+主表 ['id'] + join ['nickname']        →  SELECT `u`.`id`, `i`.`nickname` FROM ...
+主表 [] + join []                      →  SELECT `u`.*, `i`.* FROM ...
+主表缺省 + join ['nickname']           →  SELECT `i`.`nickname` FROM ...
+主表缺省 + join 缺省                   →  SELECT * FROM ...
+```
+
+join 项携带 fields 的完整示例：
+
+```
+['SELECT',
+    'fields' => ['id'],
+    'from'   => ['u' => 'user'],
+    'join'   => [
+        ['table' => ['i' => 'info'], 'on' => ['user_id' => 'id'], 'fields' => ['nickname']],
+    ],
+]
+
+→  SELECT `u`.`id`, `i`.`nickname`
+   FROM `user` `u` LEFT JOIN `info` `i` ON (`i`.`user_id` = `u`.`id`)
+```
+
+UPDATE / DELETE 的 join 忽略 fields（无 select 空间）。
 
 **子查询在 from：**
 
 ```
 ['SELECT',
     'fields' => ['a.*'],
-    'from'   => {a: ['SELECT', 'fields' => ['*'], 'from' => 'log', 'where' => ['type' => 1]]},
+    'from'   => ['a' => ['SELECT', 'fields' => ['*'], 'from' => 'log', 'where' => ['type' => 1]]],
 ]
 
-→  SELECT `a`.* FROM (SELECT * FROM `log` WHERE `type` = 1) `a`
+→  SELECT * FROM (SELECT * FROM `log` WHERE `type` = 1)
 ```
+
+from 唯一源为子查询且无 join → 单源：`a.*` 前缀匹配别名退化、FROM 别名一并退化。子查询内部递归隔离，用自身上下文（`log` 单源，字段保持裸写）。
 
 **多表无别名：**
 
@@ -373,7 +538,7 @@ for (from as alias => name)
 ['SELECT',
     'fields' => ['user.id', 'role.name'],
     'from'   => ['user', 'role'],
-    'where'  => [['eq', 'user.role_id', 'role.id']],
+    'where'  => [['=', 'user.role_id', 'role.id']],
 ]
 
 →  SELECT `user`.`id`, `role`.`name` FROM `user`, `role` WHERE `user`.`role_id` = `role`.`id`
@@ -439,7 +604,7 @@ for (from as alias => name)
 ```
 ['INSERT',
     'table' => 'user',
-    'value' => ['name' => 'vea', 'age' => 30],
+    'value' => ['name' => "'vea'", 'age' => 30],
 ]
 
 →  INSERT INTO `user` (`name`, `age`) VALUES ('vea', 30)
@@ -447,8 +612,8 @@ for (from as alias => name)
 ['INSERT',
     'table'  => 'user',
     'values' => [
-        ['name' => 'vea', 'age' => 30],
-        ['name' => 'f0', 'age' => 25],
+        ['name' => "'vea'", 'age' => 30],
+        ['name' => "'f0'", 'age' => 25],
     ],
 ]
 
@@ -460,7 +625,7 @@ for (from as alias => name)
 ```
 ['INSERT',
     'table'   => 'user',
-    'value'   => ['id' => 1, 'name' => 'vea'],
+    'value'   => ['id' => 1, 'name' => "'vea'"],
     'replace' => true,
 ]
 
@@ -472,8 +637,8 @@ for (from as alias => name)
 ```
 ['INSERT',
     'table'  => 'user',
-    'value'  => ['id' => 1, 'name' => 'newname'],
-    'update' => ['name' => 'newname'],
+    'value'  => ['id' => 1, 'name' => "'newname'"],
+    'update' => ['name' => "'newname'"],
 ]
 
 →  INSERT INTO `user` (`id`, `name`) VALUES (1, 'newname')
@@ -490,7 +655,7 @@ for (from as alias => name)
     'select' => ['SELECT',
         'fields' => ['*'],
         'from'   => 'log',
-        'where'  => [['lt', 'created_at', ['s', '2023-01-01']]],
+        'where'  => [['<', 'created_at', "'2023-01-01'"]],
     ],
 ]
 
@@ -502,21 +667,23 @@ for (from as alias => name)
 
 ```
 ['UPDATE',
-    'from'   => {u: 'user'},
-    'set'    => ['name' => 'newname', 'updated_at' => ['s', '2024-01-01']],
+    'from'   => ['u' => 'user'],
+    'set'    => ['name' => "'newname'", 'updated_at' => "'2024-01-01'"],
     'where'  => ['id' => 1],
 ]
 
-→  UPDATE `user` `u` SET `name` = 'newname', `updated_at` = '2024-01-01' WHERE `id` = 1
+→  UPDATE `user` SET `name` = 'newname', `updated_at` = '2024-01-01' WHERE `id` = 1
 ```
+
+单源（无 join）：FROM 别名退化，字段保持裸写。
 
 **多表 UPDATE：**
 
 ```
 ['UPDATE',
-    'from'   => {u: 'user'},
-    'join'   => [{table: {i: 'info'}, on: {user_id: 'id'}}],
-    'set'    => {'u.name': ['i', 'nickname']},
+    'from'   => ['u' => 'user'],
+    'join'   => [['table' => ['i' => 'info'], 'on' => ['user_id' => 'id']]],
+    'set'    => ['u.name' => 'i.nickname'],
     'where'  => ['u.status' => 1],
 ]
 
@@ -525,6 +692,8 @@ for (from as alias => name)
    SET `u`.`name` = `i`.`nickname`
    WHERE `u`.`status` = 1
 ```
+
+SET 值裸写即为字段引用（同 SQL：`SET u.name = i.nickname`）。
 
 UPDATE 也支持 `order` / `limit`：
 
@@ -549,8 +718,8 @@ UPDATE 也支持 `order` / `limit`：
 ```
 ['DELETE',
     'delete' => ['u'],
-    'from'   => {u: 'user'},
-    'join'   => [{table: {i: 'info'}, on: {user_id: 'id'}}],
+    'from'   => ['u' => 'user'],
+    'join'   => [['table' => ['i' => 'info'], 'on' => ['user_id' => 'id']]],
     'where'  => ['u.status' => 0, 'i.type' => 1],
 ]
 
@@ -562,7 +731,7 @@ UPDATE 也支持 `order` / `limit`：
 DELETE 也支持 `order` / `limit`：
 
 ```
-['DELETE', 'from' => 'log', 'where' => [['lt', 'id', 1000]], 'order' => ['id'], 'limit' => 100]
+['DELETE', 'from' => 'log', 'where' => [['<', 'id', 1000]], 'order' => ['id'], 'limit' => 100]
 →  DELETE FROM `log` WHERE `id` < 1000 ORDER BY `id` LIMIT 100
 ```
 
@@ -625,7 +794,7 @@ DELETE 也支持 `order` / `limit`：
     ['SELECT',
         'fields' => ['region', 'sales'],
         'from'   => 'sales',
-        'where'  => [['gt', 'sales', 1000]],
+        'where'  => [['>', 'sales', 1000]],
     ],
 ]
 
@@ -660,33 +829,65 @@ CTE 定义以 key-value 形式排列，字符串 key 为 CTE 名。末项（数�
 
 ```
 join: [
-    {table: {i: 'info'},       on: {user_id: 'id'},                           type: 'LEFT'},
-    {table: {p: 'profile'},    on: {user_id: 'id'},                           type: 'INNER'},
-    {table: {a: ['SELECT', 'fields' => ['*'], 'from' => 'log']},              on: {user_id: 'id'}},
-    {table: 'role',            on: {id: 'role_id'}},
+    ['table' => ['i' => 'info'],    'on' => ['user_id' => 'id'],    'type' => 'LEFT'],
+    ['table' => ['p' => 'profile'], 'on' => ['user_id' => 'id'],    'type' => 'INNER'],
+    ['table' => ['a' => ['SELECT', 'fields' => ['*'], 'from' => 'log']], 'on' => ['user_id' => 'id']],
+    ['table' => 'role',             'on' => ['id' => 'role_id']],
 ]
 ```
 
 `type` 缺省 `LEFT`。⚠ `LEFT` 是破坏性缺省值——忘写 type 可能取到预期之外的数据，生产代码建议显式指定 type。
 `on` 使用条件语法（参见条件章节）。`on` 与 `using` 互斥。
 
-ON 中 key-value 的 key 为 join 表的字段，value 为主表（或其他已声明的表）的字段：
+**ON 的表上下文（分侧补全）：** key 补 join 表前缀，value 补默认表（from 第一个源）前缀；含 `.` 的显式限定跳过：
 
 ```
-{table: {i: 'info'}, on: {user_id: 'id'}}
+['table' => ['i' => 'info'], 'on' => ['user_id' => 'id']]
 →  LEFT JOIN `info` `i` ON (`i`.`user_id` = `u`.`id`)
 
-// 等效独立表达式写法：
-{table: {i: 'info'}, on: ['AND', ['eq', 'user_id', 'id']]}
+// 显式限定等效：
+['table' => ['i' => 'info'], 'on' => ['user_id' => 'u.id']]
+→  同上
+
+// 独立表达式写法（字段同样按 ON 上下文补全）：
+['table' => ['i' => 'info'], 'on' => ['AND', ['=', 'user_id', 'id']]]
 ```
+
+链式 join 的 ON 引用**前面** join 的表时，裸写会被错补默认表前缀，须显式限定：
+
+```
+['table' => ['r' => 'role'], 'on' => ['id' => 'i.role_id']]
+→  LEFT JOIN `role` `r` ON (`r`.`id` = `i`.`role_id`)
+```
+
+**join fields：** join 项可携带 `fields`，字段补 join 表限定并依次并入主查询的 select 空间（见 6.1·select 空间）：
+
+```
+['SELECT',
+    'from'   => ['u' => 'user'],
+    'join'   => [
+        ['table' => ['i' => 'info'], 'on' => ['user_id' => 'id'], 'fields' => ['nickname']],
+        ['table' => ['r' => 'role'], 'on' => ['id' => 'role_id'], 'fields' => []],
+    ],
+]
+
+→  SELECT `i`.`nickname`, `r`.*
+   FROM `user` `u`
+   LEFT JOIN `info` `i` ON (`i`.`user_id` = `u`.`id`)
+   LEFT JOIN `role` `r` ON (`r`.`id` = `u`.`role_id`)
+```
+
+主表 fields 缺省 → 无贡献，空间只含 join 贡献。`fields => []` 表示该源 `表.*`。
+
+UPDATE / DELETE 的 join 忽略 fields。
 
 **USING：**（与 `on` 互斥）
 
 ```
-{table: 'user_role', using: 'user_id'}
+['table' => 'user_role', 'using' => 'user_id']
 →  LEFT JOIN `user_role` USING (`user_id`)
 
-{table: 'user_role', using: ['user_id', 'role_id']}
+['table' => 'user_role', 'using' => ['user_id', 'role_id']]
 →  LEFT JOIN `user_role` USING (`user_id`, `role_id`)
 ```
 
@@ -710,16 +911,16 @@ ON 中 key-value 的 key 为 join 表的字段，value 为主表（或其他已�
     'recent' => ['SELECT',
         'fields' => ['id', 'title', 'created_at'],
         'from'   => 'article',
-        'where'  => [['gt', 'created_at', ['s', '2024-01-01']]],
+        'where'  => [['>', 'created_at', "'2024-01-01'"]],
     ],
     ['SELECT',
-        'fields' => ['id', 'title', 'label' => ['IF', ['gt', 'view_count', 1000], ['s', 'hot'], ['s', 'normal']]],
-        'from'   => {a: ['SELECT',
+        'fields' => ['id', 'title', 'label' => ['IF', ['>', 'view_count', 1000], "'hot'", "'normal'"]],
+        'from'   => ['a' => ['SELECT',
             'fields' => ['a.id', 'a.title', 'cnt' => ['COUNT', 'c.id']],
-            'from'   => {a: 'recent'},
-            'join'   => [{table: {c: 'comment'}, on: {article_id: 'a.id'}, type: 'LEFT'}],
+            'from'   => ['a' => 'recent'],
+            'join'   => [['table' => ['c' => 'comment'], 'on' => ['article_id' => 'a.id'], 'type' => 'LEFT']],
             'group'  => ['a.id'],
-        ]},
+        ]],
         'where'  => ['AND', 'status' => 1],
         'order'  => ['created_at' => 'DESC'],
         'limit'  => 10,
@@ -735,8 +936,10 @@ ON 中 key-value 的 key 为 join 表的字段，value 为主表（或其他已�
        FROM `recent` `a`
        LEFT JOIN `comment` `c` ON (`c`.`article_id` = `a`.`id`)
        GROUP BY `a`.`id`
-   ) `a`
+   )
    WHERE `status` = 1
    ORDER BY `created_at` DESC
    LIMIT 10
 ```
+
+外层 from 唯一源为子查询且无 join → 单源：FROM 别名 `a` 退化，字段裸写不补全。内层子查询存在 join → 多源：FROM 别名保留、ON 与显式限定字段按表上下文补全。
