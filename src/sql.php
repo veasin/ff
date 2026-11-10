@@ -9,7 +9,7 @@ namespace ff;
  * ```
  * sql(['SELECT', 'fields' => ['id', 'name'], 'from' => 'user']);//SELECT `id`, `name` FROM `user`
  * sql(['SELECT', 'fields' => ['id'], 'from' => ['u' => 'user'], 'join' => [['table' => ['i' => 'info'], 'on' => ['user_id' => 'id'], 'fields' => ['nickname']]]]);//SELECT `u`.`id`, `i`.`nickname` FROM `user` `u` LEFT JOIN `info` `i` ON (`i`.`user_id` = `u`.`id`)
- * sql(['INSERT', 'table' => 'user', 'value' => ['name' => "'vea'", 'age' => 30]]);//INSERT INTO `user` (`name`, `age`) VALUES ('vea', 30)
+ * sql(['INSERT', 'from' => 'user', 'value' => ['name' => "'vea'", 'age' => 30]]);//INSERT INTO `user` (`name`, `age`) VALUES ('vea', 30)
  * sql(['UPDATE', 'from' => 'user', 'set' => ['name' => "'newname'"], 'where' => ['id' => 1]]);//UPDATE `user` SET `name` = 'newname' WHERE `id` = 1
  * sql(['DELETE', 'from' => 'user', 'where' => ['status' => 0]]);//DELETE FROM `user` WHERE `status` = 0
  * sql(['SELECT', 'from' => 'user', 'where' => ['id' => 1]], ['param' => true]);//['SELECT * FROM `user` WHERE `id` = ?', [1]]
@@ -191,7 +191,7 @@ function sql(array $query, string|array $options = []): string|array|null{
 			}
 			return implode(', ', $parts);
 		};
-		$srcOf = static function($src): array{
+		$srcOf = static function($src) use (&$srcOf): array{
 			if(is_string($src)){
 				$n = strlen($src);
 				if($n >= 2 && $src[0] === '`' && $src[$n - 1] === '`') return [$src, $src];
@@ -199,7 +199,7 @@ function sql(array $query, string|array $options = []): string|array|null{
 				return $pos === false ? [$src, $src] : [substr($src, 0, $pos), substr($src, $pos + 1)];
 			}
 			return match (true) {
-				is_array($src) && !array_is_list($src) => [$src[array_key_first($src)], (string)array_key_first($src)],
+				is_array($src) && !array_is_list($src) => is_string($v = $src[array_key_first($src)]) ? [$srcOf($v)[0], (string)array_key_first($src)] : [$v, (string)array_key_first($src)],
 				is_array($src) => [$src, null],
 				default => [(string)$src, (string)$src],
 			};
@@ -211,7 +211,7 @@ function sql(array $query, string|array $options = []): string|array|null{
 			if(array_is_list($from)){
 				foreach($from as $item) if(is_string($item)) $out[] = $srcOf($item);
 			}
-			else foreach($from as $alias => $entity) $out[] = [$entity, (string)$alias];
+			else foreach($from as $alias => $entity) $out[] = [is_string($entity) ? $srcOf($entity)[0] : $entity, (string)$alias];
 			return $out;
 		};
 		$resolveCtx = static function(array $qry) use ($sources): array{
@@ -307,10 +307,12 @@ function sql(array $query, string|array $options = []): string|array|null{
 			}
 			return $sql;
 		};
-		$compileInsert = static function(array $qry) use ($id, &$compile, &$val, &$_cfg): ?string{
-			if(!isset($qry['table']) || (!isset($qry['value']) && empty($qry['values']) && !isset($qry['select']))) return null;
+		$compileInsert = static function(array $qry) use ($id, &$compile, &$val, &$_cfg, $sources): ?string{
+			if(!isset($qry['from']) || (!isset($qry['value']) && empty($qry['values']) && !isset($qry['select']))) return null;
 			$cmd = !empty($qry['replace']) ? $_cfg['replace'] : 'INSERT';
-			$sql = $cmd . ' INTO ' . $id($qry['table']);
+			$parts = [];
+			foreach($sources($qry['from']) as [$entity]) $parts[] = is_array($entity) ? '(' . ($compile($entity) ?? '') . ')' : $id($entity);
+			$sql = $cmd . ' INTO ' . implode(', ', $parts);
 			if(isset($qry['select'])) return $sql . ' ' . ($compile($qry['select']) ?? '');
 			if(isset($qry['value']) || !empty($qry['values'])){
 				$rows = isset($qry['value']) ? [$qry['value']] : $qry['values'];

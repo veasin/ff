@@ -1091,7 +1091,7 @@ $affected = db(sql::table('users')->where(['id' => 1])->delete(), 'count');//删
 ```php
 sql(['SELECT', 'fields' => ['id', 'name'], 'from' => 'user']);
 sql(['SELECT', 'from' => 'user', 'where' => ['id' => 1]]);
-sql(['INSERT', 'table' => 'user', 'value' => ['name' => "'vea'", 'age' => 30]]);
+sql(['INSERT', 'from' => 'user', 'value' => ['name' => "'vea'", 'age' => 30]]);
 sql(['UPDATE', 'from' => 'user', 'set' => ['name' => "'newname'"], 'where' => ['id' => 1]]);
 sql(['DELETE', 'from' => 'user', 'where' => ['status' => 0]]);
 // 方言与占位模式

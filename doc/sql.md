@@ -428,6 +428,7 @@ from 描述数据来源，表名裸写（同 SQL），支持以下形式：
 | `'user u'` | 单表带别名 | `` FROM `user` `u` `` |
 | `['user', 'role']` | 多表无别名 | `` FROM `user`, `role` `` |
 | `['u' => 'user']` | 单/多表有别名 | `` FROM `user` `u` `` |
+| `['a' => 'user u']` | key 别名权威 | `` FROM `user` `a` `` |
 | `['u' => 'user', 'r' => 'role']` | 多表有别名 | `` FROM `user` `u`, `role` `r` `` |
 | `['a' => ['SELECT', ...]]` | 子查询 | `` FROM (SELECT ...) `a` `` |
 
@@ -437,13 +438,15 @@ from 描述数据来源，表名裸写（同 SQL），支持以下形式：
 for (from as alias => name)
     if alias is string
         if name is array → 子查询，别名为 alias
-        else → 表 name，别名为 alias
+        else → 表 name 解析（含尾部别名），别名为 alias
     else
         // alias 为数字
-        → 表 name，无别名
+        → 表 name，尾部别名生效
 ```
 
 key 为别名、value 为表实体（表名或子查询）——与字段 AS 别名（`'total' => ['COUNT', '*']`）方向一致。
+
+**key 别名权威**：value 为字符串时解析其尾部别名（`'posts p'` → 表 `posts` + 别名 `p`）；key 已占据别名槽位时，尾部别名被抛弃——`['a' => 'posts p']` → `` `posts` `a` ``。反引号 RAW 标记的 value（`` '`posts p`' ``）整体不拆，原样输出交 db 验证。
 
 多表 from 的裸字段按默认表（第一个源，无别名用表名）补全；需要其他表的字段显式限定。
 
@@ -601,16 +604,18 @@ from 唯一源为子查询且无 join → 单源：`a.*` 前缀匹配别名退�
 
 ### 6.2 INSERT
 
+主表键与其他语句统一为 `from`。INSERT 无别名投影位：`from` 的别名（尾部写法与 key 写法）被丢弃；多源 from 原样输出，语法错误由 db 报出。
+
 ```
 ['INSERT',
-    'table' => 'user',
+    'from' => 'user',
     'value' => ['name' => "'vea'", 'age' => 30],
 ]
 
 →  INSERT INTO `user` (`name`, `age`) VALUES ('vea', 30)
 
 ['INSERT',
-    'table'  => 'user',
+    'from'   => 'user',
     'values' => [
         ['name' => "'vea'", 'age' => 30],
         ['name' => "'f0'", 'age' => 25],
@@ -618,13 +623,21 @@ from 唯一源为子查询且无 join → 单源：`a.*` 前缀匹配别名退�
 ]
 
 →  INSERT INTO `user` (`name`, `age`) VALUES ('vea', 30), ('f0', 25)
+
+// 别名丢弃
+'from' => 'user u'          →  INSERT INTO `user` ...
+'from' => ['u' => 'user']   →  INSERT INTO `user` ...
+'from' => ['a' => 'user u'] →  INSERT INTO `user` ...
+
+// 多源原样输出（交 db 报错）
+'from' => ['user', 'log']   →  INSERT INTO `user`, `log` ...
 ```
 
 **REPLACE：**
 
 ```
 ['INSERT',
-    'table'   => 'user',
+    'from'    => 'user',
     'value'   => ['id' => 1, 'name' => "'vea'"],
     'replace' => true,
 ]
@@ -636,7 +649,7 @@ from 唯一源为子查询且无 join → 单源：`a.*` 前缀匹配别名退�
 
 ```
 ['INSERT',
-    'table'  => 'user',
+    'from'   => 'user',
     'value'  => ['id' => 1, 'name' => "'newname'"],
     'update' => ['name' => "'newname'"],
 ]
@@ -651,7 +664,7 @@ from 唯一源为子查询且无 join → 单源：`a.*` 前缀匹配别名退�
 
 ```
 ['INSERT',
-    'table'  => 'log_archive',
+    'from'   => 'log_archive',
     'select' => ['SELECT',
         'fields' => ['*'],
         'from'   => 'log',
@@ -825,7 +838,7 @@ CTE 定义以 key-value 形式排列，字符串 key 为 CTE 名。末项（数�
 
 ## 七、JOIN
 
-`table` 格式与 from 相同。
+`table` 格式与 from 相同（含 key 别名权威规则：`['a' => 'posts p']` → `` LEFT JOIN `posts` `a` ``）。
 
 ```
 join: [

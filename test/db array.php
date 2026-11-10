@@ -36,7 +36,7 @@ test('db数组-INSERT id', function(){
 	$cn = 'test_' . uniqid();
 	container("#db.{$cn}", ['dsn' => 'sqlite::memory:']);
 	db('CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT)', 'ok', $cn);
-	$id = db(['INSERT', 'table' => 'users', 'value' => ['name' => "'NewUser'"]], 'id', $cn);
+	$id = db(['INSERT', 'from' => 'users', 'value' => ['name' => "'NewUser'"]], 'id', $cn);
 	return is_numeric($id) && $id > 0;
 }, true);
 

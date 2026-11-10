@@ -144,6 +144,8 @@ test('JOIN USING string', sql(['SELECT', 'from' => 'user', 'join' => [['table' =
 test('JOIN USING array', sql(['SELECT', 'from' => 'user', 'join' => [['table' => 'user_role', 'using' => ['user_id', 'role_id']]]]), 'SELECT * FROM `user` LEFT JOIN `user_role` USING (`user_id`, `role_id`)');
 test('JOIN multiple', sql(['SELECT', 'from' => ['u' => 'user'], 'join' => [['table' => ['i' => 'info'], 'on' => ['user_id' => 'u.id']], ['table' => ['r' => 'role'], 'on' => ['role_id' => 'u.role_id'], 'type' => 'INNER']]]), 'SELECT * FROM `user` `u` LEFT JOIN `info` `i` ON (`i`.`user_id` = `u`.`id`) INNER JOIN `role` `r` ON (`r`.`role_id` = `u`.`role_id`)');
 test('JOIN subquery', sql(['SELECT', 'from' => ['u' => 'user'], 'join' => [['table' => ['a' => ['SELECT', 'fields' => ['*'], 'from' => 'log']], 'on' => ['user_id' => 'u.id']]]]), 'SELECT * FROM `user` `u` LEFT JOIN (SELECT * FROM `log`) `a` ON (`a`.`user_id` = `u`.`id`)');
+test('JOIN table value tail alias overridden by key', sql(['SELECT', 'fields' => ['id'], 'from' => ['u' => 'user'], 'join' => [['table' => ['a' => 'posts p'], 'on' => ['user_id' => 'id'], 'fields' => ['title']]]]), 'SELECT `u`.`id`, `a`.`title` FROM `user` `u` LEFT JOIN `posts` `a` ON (`a`.`user_id` = `u`.`id`)');
+test('JOIN table string tail alias', sql(['SELECT', 'fields' => ['title'], 'from' => ['u' => 'user'], 'join' => [['table' => 'posts p', 'on' => ['user_id' => 'id']]]]), 'SELECT `u`.`title` FROM `user` `u` LEFT JOIN `posts` `p` ON (`p`.`user_id` = `u`.`id`)');
 
 // ===== SELECT — GROUP BY / HAVING / ORDER / LIMIT =====
 test('GROUP BY single', sql(['SELECT', 'fields' => ['type'], 'from' => 'user', 'group' => ['type']]), 'SELECT `type` FROM `user` GROUP BY `type`');
@@ -166,14 +168,18 @@ test('LOCK NOWAIT', sql(['SELECT', 'from' => 'user', 'lock' => ['UPDATE', 'NOWAI
 test('LOCK SKIP LOCKED', sql(['SELECT', 'from' => 'user', 'lock' => ['UPDATE', 'SKIP LOCKED']]), 'SELECT * FROM `user` FOR UPDATE SKIP LOCKED');
 
 // ===== INSERT =====
-test('INSERT single', sql(['INSERT', 'table' => 'user', 'value' => ['name' => "'vea'", 'age' => 30]]), "INSERT INTO `user` (`name`, `age`) VALUES ('vea', 30)");
-test('INSERT multi', sql(['INSERT', 'table' => 'user', 'values' => [['name' => "'vea'", 'age' => 30], ['name' => "'f0'", 'age' => 25]]]), "INSERT INTO `user` (`name`, `age`) VALUES ('vea', 30), ('f0', 25)");
-test('INSERT bool null', sql(['INSERT', 'table' => 'user', 'value' => ['active' => true, 'deleted_at' => null]]), "INSERT INTO `user` (`active`, `deleted_at`) VALUES (TRUE, NULL)");
-test('INSERT bare field value', sql(['INSERT', 'table' => 'user', 'value' => ['name' => 'unknown']]), "INSERT INTO `user` (`name`) VALUES (`unknown`)");
-test('REPLACE', sql(['INSERT', 'table' => 'user', 'value' => ['id' => 1, 'name' => "'vea'"], 'replace' => true]), "REPLACE INTO `user` (`id`, `name`) VALUES (1, 'vea')");
-test('INSERT ON DUPLICATE KEY', sql(['INSERT', 'table' => 'user', 'value' => ['id' => 1, 'name' => "'newname'"], 'update' => ['name' => "'newname'"]]), "INSERT INTO `user` (`id`, `name`) VALUES (1, 'newname') ON DUPLICATE KEY UPDATE `name` = 'newname'");
-test('INSERT ON DUPLICATE multi', sql(['INSERT', 'table' => 'user', 'value' => ['id' => 1, 'name' => "'newname'", 'age' => 25], 'update' => ['name' => "'newname'", 'age' => 25]]), "INSERT INTO `user` (`id`, `name`, `age`) VALUES (1, 'newname', 25) ON DUPLICATE KEY UPDATE `name` = 'newname', `age` = 25");
-test('INSERT SELECT', sql(['INSERT', 'table' => 'log_archive', 'select' => ['SELECT', 'from' => 'log', 'where' => [['<', 'created_at', "'2023-01-01'"]]]]), "INSERT INTO `log_archive` SELECT * FROM `log` WHERE `created_at` < '2023-01-01'");
+test('INSERT single', sql(['INSERT', 'from' => 'user', 'value' => ['name' => "'vea'", 'age' => 30]]), "INSERT INTO `user` (`name`, `age`) VALUES ('vea', 30)");
+test('INSERT multi', sql(['INSERT', 'from' => 'user', 'values' => [['name' => "'vea'", 'age' => 30], ['name' => "'f0'", 'age' => 25]]]), "INSERT INTO `user` (`name`, `age`) VALUES ('vea', 30), ('f0', 25)");
+test('INSERT bool null', sql(['INSERT', 'from' => 'user', 'value' => ['active' => true, 'deleted_at' => null]]), "INSERT INTO `user` (`active`, `deleted_at`) VALUES (TRUE, NULL)");
+test('INSERT bare field value', sql(['INSERT', 'from' => 'user', 'value' => ['name' => 'unknown']]), "INSERT INTO `user` (`name`) VALUES (`unknown`)");
+test('REPLACE', sql(['INSERT', 'from' => 'user', 'value' => ['id' => 1, 'name' => "'vea'"], 'replace' => true]), "REPLACE INTO `user` (`id`, `name`) VALUES (1, 'vea')");
+test('INSERT ON DUPLICATE KEY', sql(['INSERT', 'from' => 'user', 'value' => ['id' => 1, 'name' => "'newname'"], 'update' => ['name' => "'newname'"]]), "INSERT INTO `user` (`id`, `name`) VALUES (1, 'newname') ON DUPLICATE KEY UPDATE `name` = 'newname'");
+test('INSERT ON DUPLICATE multi', sql(['INSERT', 'from' => 'user', 'value' => ['id' => 1, 'name' => "'newname'", 'age' => 25], 'update' => ['name' => "'newname'", 'age' => 25]]), "INSERT INTO `user` (`id`, `name`, `age`) VALUES (1, 'newname', 25) ON DUPLICATE KEY UPDATE `name` = 'newname', `age` = 25");
+test('INSERT SELECT', sql(['INSERT', 'from' => 'log_archive', 'select' => ['SELECT', 'from' => 'log', 'where' => [['<', 'created_at', "'2023-01-01'"]]]]), "INSERT INTO `log_archive` SELECT * FROM `log` WHERE `created_at` < '2023-01-01'");
+test('INSERT from alias string dropped', sql(['INSERT', 'from' => 'user u', 'value' => ['name' => "'vea'"]]), "INSERT INTO `user` (`name`) VALUES ('vea')");
+test('INSERT from alias key dropped', sql(['INSERT', 'from' => ['u' => 'user'], 'value' => ['name' => "'vea'"]]), "INSERT INTO `user` (`name`) VALUES ('vea')");
+test('INSERT from alias key over value tail', sql(['INSERT', 'from' => ['a' => 'user u'], 'value' => ['name' => "'vea'"]]), "INSERT INTO `user` (`name`) VALUES ('vea')");
+test('INSERT from multi passthrough', sql(['INSERT', 'from' => ['user', 'log'], 'value' => ['name' => "'vea'"]]), "INSERT INTO `user`, `log` (`name`) VALUES ('vea')");
 
 // ===== UPDATE =====
 test('UPDATE basic', sql(['UPDATE', 'from' => 'user', 'set' => ['name' => "'newname'"], 'where' => ['id' => 1]]), "UPDATE `user` SET `name` = 'newname' WHERE `id` = 1");
@@ -206,8 +212,8 @@ test('WITH', sql(['WITH', 'sales' => ['SELECT', 'fields' => ['region', ['SUM', '
 test('WITH RECURSIVE', sql(['WITH', 'recursive' => true, 'tree' => ['SELECT', 'fields' => ['id', 'name'], 'from' => 'user', 'where' => ['parent_id' => 0]], ['SELECT', 'from' => 'tree']]), "WITH RECURSIVE\n`tree` AS (\nSELECT `id`, `name` FROM `user` WHERE `parent_id` = 0\n)\nSELECT * FROM `tree`");
 
 // ===== SQLite 方言差异 =====
-test('sqlite REPLACE', sql(['INSERT', 'table' => 'user', 'value' => ['id' => 1, 'name' => "'vea'"], 'replace' => true], 'sqlite'), "INSERT OR REPLACE INTO `user` (`id`, `name`) VALUES (1, 'vea')");
-test('sqlite ON CONFLICT', sql(['INSERT', 'table' => 'user', 'value' => ['id' => 1, 'name' => "'newname'"], 'update' => ['name' => "'newname'"]], 'sqlite'), "INSERT INTO `user` (`id`, `name`) VALUES (1, 'newname') ON CONFLICT DO UPDATE SET `name` = 'newname'");
+test('sqlite REPLACE', sql(['INSERT', 'from' => 'user', 'value' => ['id' => 1, 'name' => "'vea'"], 'replace' => true], 'sqlite'), "INSERT OR REPLACE INTO `user` (`id`, `name`) VALUES (1, 'vea')");
+test('sqlite ON CONFLICT', sql(['INSERT', 'from' => 'user', 'value' => ['id' => 1, 'name' => "'newname'"], 'update' => ['name' => "'newname'"]], 'sqlite'), "INSERT INTO `user` (`id`, `name`) VALUES (1, 'newname') ON CONFLICT DO UPDATE SET `name` = 'newname'");
 test('sqlite LIMIT array', sql(['SELECT', 'from' => 'user', 'limit' => [10, 20]], 'sqlite'), 'SELECT * FROM `user` LIMIT 20 OFFSET 10');
 test('sqlite LOCK passthrough', sql(['SELECT', 'from' => 'user', 'where' => ['id' => 1], 'lock' => 'UPDATE'], 'sqlite'), 'SELECT * FROM `user` WHERE `id` = 1 FOR UPDATE');
 test('sqlite LOCK array passthrough', sql(['SELECT', 'from' => 'user', 'lock' => ['UPDATE', 'NOWAIT']], 'sqlite'), 'SELECT * FROM `user` FOR UPDATE NOWAIT');
@@ -217,8 +223,8 @@ test('sqlite CUBE passthrough', sql(['SELECT', 'fields' => ['region'], 'from' =>
 // ===== 异常配置 =====
 test('invalid empty array', sql([]), null);
 test('invalid unknown type', sql(['FETCH', 'from' => 'user']), null);
-test('INSERT no table', sql(['INSERT']), null);
-test('INSERT no values', sql(['INSERT', 'table' => 'user']), null);
+test('INSERT no from', sql(['INSERT']), null);
+test('INSERT no values', sql(['INSERT', 'from' => 'user']), null);
 test('UNION no subqueries', sql(['UNION']), null);
 test('WITH no CTEs', sql(['WITH']), null);
 test('UPDATE no from', sql(['UPDATE']), null);
@@ -236,13 +242,13 @@ test('empty values in IN', sql(['SELECT', 'from' => 'user', 'where' => ['id' => 
 test('param WHERE eq', sql(['SELECT', 'from' => 'user', 'where' => ['id' => 1]], ['param' => true]), ['SELECT * FROM `user` WHERE `id` = ?', [1]]);
 test('param WHERE literal mark', sql(['SELECT', 'from' => 'user', 'where' => ['id' => 1, 'name' => "'vea'"]], ['param' => true]), ["SELECT * FROM `user` WHERE `id` = ? AND `name` = ?", [1, 'vea']]);
 test('param bare field not bound', sql(['SELECT', 'from' => 'user', 'where' => ['name' => 'creator']], ['param' => true]), ['SELECT * FROM `user` WHERE `name` = `creator`', []]);
-test('param INSERT', sql(['INSERT', 'table' => 'user', 'value' => ['name' => "'vea'", 'age' => 30]], ['param' => true]), ["INSERT INTO `user` (`name`, `age`) VALUES (?, ?)", ['vea', 30]]);
+test('param INSERT', sql(['INSERT', 'from' => 'user', 'value' => ['name' => "'vea'", 'age' => 30]], ['param' => true]), ["INSERT INTO `user` (`name`, `age`) VALUES (?, ?)", ['vea', 30]]);
 test('param UPDATE', sql(['UPDATE', 'from' => 'user', 'set' => ['name' => "'newname'"], 'where' => ['id' => 1]], ['param' => true]), ["UPDATE `user` SET `name` = ? WHERE `id` = ?", ['newname', 1]]);
 test('param WHERE IN list', sql(['SELECT', 'from' => 'user', 'where' => ['AND', 'id' => [1, 2, 5]]], ['param' => true]), ['SELECT * FROM `user` WHERE `id` IN (?, ?, ?)', [1, 2, 5]]);
 test('param NULL stays NULL', sql(['SELECT', 'from' => 'user', 'where' => ['deleted_at' => null]], ['param' => true]), ['SELECT * FROM `user` WHERE `deleted_at` IS NULL', []]);
 test('param bool as int', sql(['SELECT', 'from' => 'user', 'where' => ['active' => true]], ['param' => true]), ['SELECT * FROM `user` WHERE `active` = ?', [1]]);
-test('param INSERT multi', sql(['INSERT', 'table' => 'user', 'values' => [['name' => "'vea'", 'age' => 30], ['name' => "'f0'", 'age' => 25]]], ['param' => true]), ["INSERT INTO `user` (`name`, `age`) VALUES (?, ?), (?, ?)", ['vea', 30, 'f0', 25]]);
-test('param ON DUPLICATE KEY', sql(['INSERT', 'table' => 'user', 'value' => ['id' => 1, 'name' => "'newname'"], 'update' => ['name' => "'newname'"]], ['param' => true]), ["INSERT INTO `user` (`id`, `name`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `name` = ?", [1, 'newname', 'newname']]);
+test('param INSERT multi', sql(['INSERT', 'from' => 'user', 'values' => [['name' => "'vea'", 'age' => 30], ['name' => "'f0'", 'age' => 25]]], ['param' => true]), ["INSERT INTO `user` (`name`, `age`) VALUES (?, ?), (?, ?)", ['vea', 30, 'f0', 25]]);
+test('param ON DUPLICATE KEY', sql(['INSERT', 'from' => 'user', 'value' => ['id' => 1, 'name' => "'newname'"], 'update' => ['name' => "'newname'"]], ['param' => true]), ["INSERT INTO `user` (`id`, `name`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `name` = ?", [1, 'newname', 'newname']]);
 test('param RAW not bound', sql(['UPDATE', 'from' => 'user', 'set' => ['counter' => '`counter + 1`'], 'where' => ['id' => 1]], ['param' => true]), ["UPDATE `user` SET `counter` = counter + 1 WHERE `id` = ?", [1]]);
 test('param multi JOIN', sql(['SELECT', 'from' => ['u' => 'user'], 'join' => [
 	['table' => ['i' => 'info'], 'on' => ['user_id' => 'u.id']],
